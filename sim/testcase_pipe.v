@@ -3,17 +3,17 @@
 // Interessengruppe fuer Mikroelektronik und Eingebettete Systeme (IMES)
 // Fachhochschule Dortmund
 //
-// Development in cooperation with Cologne Chip AG 
+// Development in cooperation with Cologne Chip AG
 //
 // Filename     : testcase_pipe.v
 // Author       : Philipp Leduc
-// Tool         : 
-// Description  : Testcase for PIPE Interface of the Gatemate FPGA. 
+// Tool         :
+// Description  : Testcase for PIPE Interface of the Gatemate FPGA.
 // Commentary   : The testcase is meant for usage with the modified SerDes Testbench.
-//                Abreviations: [i_] > input, 
-//                              [o_] > output, 
+//                Abreviations: [i_] > input,
+//                              [o_] > output,
 //                              [_n] > low active
-//                
+//
 // Changelog:
 // -------------------------------------------------------------------------------------------------
 // Version | Author             | Date       | Changes
@@ -41,7 +41,7 @@ always @(TX_SERIO_P) begin
 
 always @(TX_SERIO_N) begin
 
- if ( S_FAULT_INJECTION == 1'b1 ) 
+ if ( S_FAULT_INJECTION == 1'b1 )
     RX_SERIO_N <= #10 ~TX_SERIO_N;
  else 
     RX_SERIO_N <= #10 TX_SERIO_N;
@@ -65,9 +65,9 @@ assign reset_core_rx_n = reset_core_pll_n;
 reg        transmission_start_flag = 1'b0;
 
 reg         status_flag_1 = 1'b0;    // Status flags for simulation
-reg         status_flag_2 = 1'b0; 
-reg         status_flag_3 = 1'b0;  
-reg         init_status_flag_done = 1'b0;  
+reg         status_flag_2 = 1'b0;
+reg         status_flag_3 = 1'b0;
+reg         init_status_flag_done = 1'b0;
 reg         s_fault_flag_for_rx = 1'b0;
 
 integer i;
@@ -109,12 +109,12 @@ task generate_data ();
         testdata_k[j] = 1'b1;
 
         // Check for COM Symbol
-        if      ( testdata[j] == 8'hBC ) 
+        if      ( testdata[j] == 8'hBC )
             testdata_com [j] = 1'b1;
-        else if ( testdata[j] == 8'h3C ) 
-            testdata_com [j] = 1'b1; 
-        else if ( testdata[j] == 8'hFC ) 
-            testdata_com [j] = 1'b1;    
+        else if ( testdata[j] == 8'h3C )
+            testdata_com [j] = 1'b1;
+        else if ( testdata[j] == 8'hFC )
+            testdata_com [j] = 1'b1;
         else
             testdata_com [j] =1'b0;
     end
@@ -124,7 +124,7 @@ endtask
 function [7:0] setControlByte(input integer pos);
    begin
     setControlByte = ( pos == 0 ) ?
-                8'h1C :        
+                8'h1C :
                 ( pos == 1 ) ?
                 8'h3C :
                 ( pos == 2 ) ?
@@ -163,20 +163,20 @@ task send_testdata (input integer bytes);
             i_TxDataK  = {testdata_k[k], testdata_k[k+1]};
         end
     end
-    else begin // PIPE 64-Bit    
+    else begin // PIPE 64-Bit
         for ( k = 0; k < 40; k = k + 8 ) begin
             //i = k + 1;
             @(posedge o_PCLK); #1;
             i_TxData   = { testdata[k+7],testdata[k+6],testdata[k+5],testdata[k+4],
                            testdata[k+3],testdata[k+2],testdata[k+1],testdata[k]}; 
             i_TxDataK  = { testdata_k[k+7],testdata_k[k+6],testdata_k[k+5],testdata_k[k+4],
-                           testdata_k[k+3],testdata_k[k+2],testdata_k[k+1],testdata_k[k]}; 
+                           testdata_k[k+3],testdata_k[k+2],testdata_k[k+1],testdata_k[k]};
         end
     end
 
     @(posedge o_PCLK); #1;
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}};  
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
   end
 endtask
 
@@ -194,12 +194,12 @@ task send_TS1_OS (input integer bytes);
 
             for ( j = 0; j < 15; j = j + 1 ) begin 
                 #8;
-                i_TxData   = 16'h23CA; 
+                i_TxData   = 16'h23CA;
                 i_TxDataK  = 8'b00;
             end
         end
     end
-    else begin // PIPE 64-Bit    
+    else begin // PIPE 64-Bit
         for ( k = 0; k < 1024; k = k + 1 ) begin // Create TS1 Ordered Set
             @(posedge o_PCLK); #1;
 
@@ -244,8 +244,8 @@ task check_testdata (input integer bytes);
             testdata_com_16 = {testdata_com[k], testdata_com[k+1]};
 
             // Check RxData
-            if ( o_RxData != testdata_16 ) begin   
-               
+            if ( o_RxData != testdata_16 ) begin
+
                 checks_done = checks_done + 1;
                 $display("ERROR: Received Data does not match Test Data.");
                 $display("     o_RxData : %h", o_RxData);
@@ -262,7 +262,7 @@ task check_testdata (input integer bytes);
 
             // Check RxDataK
             if ( o_RxDataK != testdata_k_16 ) begin
-                
+
                 checks_done = checks_done + 1;
                 $display("ERROR: Received K Data does not match Test Data.");
                 $display("    o_RxDataK : %b", o_RxDataK);
@@ -279,7 +279,7 @@ task check_testdata (input integer bytes);
 
             // Check o_RxDataComma
             if ( o_RxDataComma != testdata_com_16 ) begin
-                
+
                 checks_done = checks_done + 1;
                 $display("ERROR: Received COM Data does not match Test Data.");
                 $display("o_RxDataComma : %b", o_RxDataComma);
@@ -296,9 +296,9 @@ task check_testdata (input integer bytes);
         end // for loop
     end // if
 
-    else begin // PIPE 64-Bit    
+    else begin // PIPE 64-Bit
 
-        for ( k = 0; k < 40; k = k + 8 ) begin 
+        for ( k = 0; k < 40; k = k + 8 ) begin
             @(posedge o_PCLK); #1;
 
             testdata_64 = { testdata[k+7],testdata[k+6],testdata[k+5],
@@ -314,7 +314,7 @@ task check_testdata (input integer bytes);
                                 testdata_com[k+1],testdata_com[k] };
 
             // Check RxData
-            if ( o_RxData != testdata_64 ) begin   
+            if ( o_RxData != testdata_64 ) begin
                 checks_done = checks_done + 1;
                 $display("ERROR: Received Data does not match Test Data.");
                 $display("     o_RxData : %h", o_RxData);
@@ -415,12 +415,12 @@ task check_err_detect (input integer checks, bytes);
 
             v_rx_not_in_table = rx_not_in_table[m -: 2];
             v_rx_disp_err     = rx_disp_err[m -: 2];
-            
+
 
             @(posedge o_PCLK); #1;
 
-                    // Check 8b/10b Error    
-                    if ( o_RxDataDecErr !=  v_rx_not_in_table) begin     
+                    // Check 8b/10b Error
+                    if ( o_RxDataDecErr !=  v_rx_not_in_table) begin
                         checks_done = checks_done + 1;
                         $display("ERROR: 8b/10b Error of SerDes and PIPE do not match.");
                         $display(" o_RxDataDecErr : %b", o_RxDataDecErr);
@@ -437,7 +437,7 @@ task check_err_detect (input integer checks, bytes);
 
                     // Check Disparity Error
                     if ( o_RxDataDispErr != v_rx_disp_err) begin
-                        
+
                         checks_done = checks_done + 1;
                         $display("ERROR: Disparity Error of SerDes and PIPE do not match.");
                         $display("o_RxDataDispErr : %b", o_RxDataDispErr);
@@ -490,7 +490,7 @@ task check_err_detect (input integer checks, bytes);
                                         $display("   o_RxData[%0d:%0d]: %h",j,j-7,o_RxData[j -: 8]);
                                         $display("");
                                         $display("---------------------------------------------");
-                                        end       
+                                        end
                                 end
                                 j = j + 8;
                             end
@@ -538,12 +538,12 @@ task check_err_detect (input integer checks, bytes);
 
 
             end // for loop
-        
+
         end  // if
 
-        ////////////////////////////////////////////////////////////////////////////////////    
-    
-    else begin // PIPE 64-Bit  
+        ////////////////////////////////////////////////////////////////////////////////////
+
+    else begin // PIPE 64-Bit
 
         // Included Delay Time
         #450;
@@ -552,7 +552,7 @@ task check_err_detect (input integer checks, bytes);
             @(posedge o_PCLK); #1;
 
             // Check 8b/10b Error
-            if ( o_RxDataDecErr !=  rx_not_in_table) begin     
+            if ( o_RxDataDecErr !=  rx_not_in_table) begin
                 checks_done = checks_done + 1;
                 $display("ERROR: 8b/10b Error of SerDes and PIPE do not match.");
                 $display(" o_RxDataDecErr : %b", o_RxDataDecErr);
@@ -569,7 +569,7 @@ task check_err_detect (input integer checks, bytes);
 
             // Check Disparity Error
             if ( o_RxDataDispErr != rx_disp_err ) begin
-                
+
                 checks_done = checks_done + 1;
                 $display("ERROR: Disparity Error of SerDes and PIPE do not match.");
                 $display("o_RxDataDispErr : %b", o_RxDataDispErr);
@@ -622,7 +622,7 @@ task check_err_detect (input integer checks, bytes);
                                 $display("   o_RxData[%0d:%0d]: %h",j,j-7,o_RxData[j -: 8]);
                                 $display("");
                                 $display("---------------------------------------------");
-                                end       
+                                end
                         end
                         j = j + 8;
                     end
@@ -688,13 +688,13 @@ initial
 
     // Reset Values PIPE Control Signals
 
-    i_PowerDown          =  2'b10;      
-    i_TxDetectRx         =  1'b0;        
-    i_TxElecIdle         =  1'b1;         
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}};  
+    i_PowerDown          =  2'b10;
+    i_TxDetectRx         =  1'b0;
+    i_TxElecIdle         =  1'b1;
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 
     i_rx_buf_reset       =  1'b0;
 
@@ -711,7 +711,7 @@ initial
     #100;
 
     writeRegfile(8'h50, 16'h0002, 16'h0007);  // Config Sel
-    writeRegfile(8'h50, 16'h0003, 16'h0003);  // Config Sel + Adpll Enable    
+    writeRegfile(8'h50, 16'h0003, 16'h0003);  // Config Sel + Adpll Enable
 
     // Alternative Method
     //startSerIOADPLL(5, 1, 5, 2, 1'b0); // 1,25 GHz -> 2,5Gb/s (PCIe)
@@ -741,33 +741,33 @@ initial
     end
 
 status_flag_1 = 1'b1;
-    // Start of Powerstate Transition Tests 
+    // Start of Powerstate Transition Tests
 
     // Transit to Powerstate P0 (IDLE)
 
-    @(posedge o_PCLK); 
+    @(posedge o_PCLK);
 
     i_PowerDown          =  2'b00;     // P0
-    i_TxDetectRx         =  1'b0;        
-    i_TxElecIdle         =  1'b1;      // Elec Idle 
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}};  
+    i_TxDetectRx         =  1'b0;
+    i_TxElecIdle         =  1'b1;      // Elec Idle
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 
     #128;
 
-    // Transit to Powerstate P1 
+    // Transit to Powerstate P1
 
-    @(posedge o_PCLK); 
+    @(posedge o_PCLK);
 
     i_PowerDown          =  2'b10;     // P1
-    i_TxDetectRx         =  1'b0;        
-    i_TxElecIdle         =  1'b1;      // Elec Idle 
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}};  
+    i_TxDetectRx         =  1'b0;
+    i_TxElecIdle         =  1'b1;      // Elec Idle
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 
     #128;
 
@@ -776,72 +776,72 @@ status_flag_1 = 1'b1;
     @(posedge o_PCLK); 
 
     i_PowerDown          =  2'b00;     // P0
-    i_TxDetectRx         =  1'b0;        
+    i_TxDetectRx         =  1'b0;
     i_TxElecIdle         =  1'b0;      // Elec Idle
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}};  
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 
     #128;
-     
 
-    // Transit to Powerstate P1 
 
-    @(posedge o_PCLK); 
+    // Transit to Powerstate P1
+
+    @(posedge o_PCLK);
 
     i_PowerDown          =  2'b10;     // P1
-    i_TxDetectRx         =  1'b0;        
-    i_TxElecIdle         =  1'b1;      // Elec Idle 
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}};  
+    i_TxDetectRx         =  1'b0;
+    i_TxElecIdle         =  1'b1;      // Elec Idle
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 
-    #256; 
+    #256;
 
     // Transit to Powerstate P0 (Loopback)
 
-    @(posedge o_PCLK); 
+    @(posedge o_PCLK);
 
     i_PowerDown          =  2'b00;     // P0
     i_TxDetectRx         =  1'b1;      // Loopmode
     i_TxElecIdle         =  1'b0;      // Elec Idle
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}};  
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 
     #128;
 
-    // Transit to Powerstate P1 
+    // Transit to Powerstate P1
 
-    @(posedge o_PCLK); 
+    @(posedge o_PCLK);
 
     i_PowerDown          =  2'b10;     // P1
-    i_TxDetectRx         =  1'b0;        
+    i_TxDetectRx         =  1'b0;
     i_TxElecIdle         =  1'b1;      // Elec Idle
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}};  
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 
     #384; 
 
-    // End of Powerstate Transition Tests 
+    // End of Powerstate Transition Tests
 
 
     // Transit to Powerstate P0 (Idle)
 
-    //@(posedge o_PCLK); 
+    //@(posedge o_PCLK);
 
     i_PowerDown          =  2'b00;     // P0
-    i_TxDetectRx         =  1'b0;      
+    i_TxDetectRx         =  1'b0;
     i_TxElecIdle         =  1'b1;      // Elec Idle
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}};  
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 
     #128;
 
@@ -850,18 +850,18 @@ status_flag_1 = 1'b1;
     @(posedge o_PCLK); #1;
 
     i_PowerDown          =  2'b00;     // P0
-    i_TxDetectRx         =  1'b0;      
+    i_TxDetectRx         =  1'b0;
     i_TxElecIdle         =  1'b0;      // Elec Idle
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}}; 
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 
     #128;
 
     // Send TS1 Ordered Sets for Word Alignment
 
-    //send_TS1_OS(8); 
+    //send_TS1_OS(8);
       send_TS1_OS(DATA_BYTES);
 
     // Normal Transmission Test
@@ -869,32 +869,32 @@ status_flag_1 = 1'b1;
     for (i = 0; i < 100 ; i = i + 1) begin
         generate_data;
         send_testdata(DATA_BYTES);
-        //#502	
+        //#502
         #534;
         //#16;
-	//	#24; 
+        //#24;
         check_testdata(DATA_BYTES);
     end
-	
+
 
 
 
     // Reset Test ( During Normal Operation )
 
     @(posedge o_PCLK); 
-    i_TxData             =  64'hB59C_A235_FBB5_F6D3;            
-    i_TxDataK            =  8'b0100_1000; 
+    i_TxData             =  64'hB59C_A235_FBB5_F6D3;
+    i_TxDataK            =  8'b0100_1000;
 
     #1000;
 
     i_Reset              =  1'b0;  // Low Active
-    i_PowerDown          =  2'b10;      
-    i_TxDetectRx         =  1'b0;        
-    i_TxElecIdle         =  1'b1;         
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}}; 
+    i_PowerDown          =  2'b10;
+    i_TxDetectRx         =  1'b0;
+    i_TxElecIdle         =  1'b1;
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 
     #20;
     i_Reset              =  1'b1;  // Release Reset
@@ -902,40 +902,40 @@ status_flag_1 = 1'b1;
     // Wait for end of Reset
 
     while (o_PhyStatus == 1'b1) begin
-        @(posedge o_PCLK); #1; 
+        @(posedge o_PCLK); #1;
     end
 
     #128;
-        
+
     // Transition to P0 (Normal Transmission)
 
-    @(posedge o_PCLK); 
+    @(posedge o_PCLK);
 
-    i_PowerDown          =  2'b00;      
-    i_TxDetectRx         =  1'b0;        
-    i_TxElecIdle         =  1'b0;         
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}}; 
+    i_PowerDown          =  2'b00;
+    i_TxDetectRx         =  1'b0;
+    i_TxElecIdle         =  1'b0;
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 
     // Reestablish Word Alignment
 
     #155;
 
-    send_TS1_OS(DATA_BYTES);     
+    send_TS1_OS(DATA_BYTES);
 
     #50;
 
     // Error Detection Test
 
-    @(posedge o_PCLK);   
+    @(posedge o_PCLK);
 
-    i_TxData             =  64'hB5B5_B5B5_B5B5_B5B5;            
-    i_TxDataK            =  8'b0000_0000; 
+    i_TxData             =  64'hB5B5_B5B5_B5B5_B5B5;
+    i_TxDataK            =  8'b0000_0000;
 
     #212;
-    
+
     fork
         check_err_detect (50,DATA_BYTES);
         force_transm_err (400);
@@ -943,13 +943,13 @@ status_flag_1 = 1'b1;
 
     #200;
 
-    // Negative Disparity Test 
+    // Negative Disparity Test
 
     if (DATA_BYTES == 32'd2) begin
 
         for (i = 0; i < 4; i = i + 1) begin
-        
-        @(posedge o_PCLK); 
+
+        @(posedge o_PCLK);
         i_TxData             =  16'hBCBC;
         i_TxDataK            =  2'b11;
         i_TxCompliance       =  2'b11;
@@ -958,103 +958,103 @@ status_flag_1 = 1'b1;
         #500;
 
         for (i = 0; i < 4; i = i + 1) begin
-       
-        @(posedge o_PCLK); 
+
+        @(posedge o_PCLK);
         i_TxData             =  16'hBCBC;
-        i_TxDataK            =  2'b11; 
+        i_TxDataK            =  2'b11;
         i_TxCompliance       =  2'b01;
         end
-        
+
     end
 
     else begin
 
-        @(posedge o_PCLK); 
-        i_TxData             =  64'hBCBC_BCBC_BCBC_BCBC;          
-        i_TxDataK            =  8'b1111_1111; 
+        @(posedge o_PCLK);
+        i_TxData             =  64'hBCBC_BCBC_BCBC_BCBC;
+        i_TxDataK            =  8'b1111_1111;
         i_TxCompliance       =  8'b1111_1111;
 
         #500;
 
-        @(posedge o_PCLK); 
-        i_TxData             =  64'hBCBC_BCBC_BCBC_BCBC;    
-        i_TxDataK            =  8'b0101_0101;          
+        @(posedge o_PCLK);
+        i_TxData             =  64'hBCBC_BCBC_BCBC_BCBC;
+        i_TxDataK            =  8'b0101_0101;
         i_TxCompliance       =  8'b0101_0101;
 
     end
 
     #300;
 
-    
+
 
     // Loopmode Test
 
-    
+
     // Transition to P0 (Loopback)
 
-    @(posedge o_PCLK); 
+    @(posedge o_PCLK);
 
-    i_TxData             =  64'hB5B5_B5B5_B5B5_B5B5;    
-    //i_TxData             =  64'hD1B4_C345_DE_E545;  
-    i_TxDataK            =  8'b0000_0000; 
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};  
+    i_TxData             =  64'hB5B5_B5B5_B5B5_B5B5;
+    //i_TxData             =  64'hD1B4_C345_DE_E545;
+    i_TxDataK            =  8'b0000_0000;
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
 
     #1000;
 
     // Activate Loopback Mode
 
     @(posedge o_PCLK); 
-    i_PowerDown          =  2'b00;      
-    i_TxDetectRx         =  1'b1;   // Loopback Modus        
-    i_TxElecIdle         =  1'b0;         
-    i_TxData             =  {DATA_WIDTH{1'b0}};   
-    i_TxDataK            =  {DATA_BYTES{1'b0}};   
-    i_RxPolarity         =  1'b0;    
+    i_PowerDown          =  2'b00;
+    i_TxDetectRx         =  1'b1;   // Loopback Modus
+    i_TxElecIdle         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
 
     #1500;
 
     // Deactivate Loopback Mode
 
-    @(posedge o_PCLK); 
-    i_PowerDown          =  2'b00;      
-    i_TxDetectRx         =  1'b0;   // Loopback Modus        
-    i_TxElecIdle         =  1'b0;         
-    i_TxData             =  {DATA_WIDTH{1'b0}};   
-    i_TxDataK            =  {DATA_BYTES{1'b0}};   
-    i_RxPolarity         =  1'b0;    
+    @(posedge o_PCLK);
+    i_PowerDown          =  2'b00;
+    i_TxDetectRx         =  1'b0;   // Loopback Modus
+    i_TxElecIdle         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
 
     #500;
 /*
     // Receiver Detection Test
 
-    @(posedge o_PCLK); 
+    @(posedge o_PCLK);
 
     i_PowerDown          =  2'b10;     // P1
-    i_TxDetectRx         =  1'b0;        
+    i_TxDetectRx         =  1'b0;
     i_TxElecIdle         =  1'b1;      // Elec Idle
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}};  
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 
-    #256; 
+    #256;
 
-    // Start Detection 
+    // Start Detection
 
-    @(posedge o_PCLK); 
-    init_status_flag_done = 1'b1;  
+    @(posedge o_PCLK);
+    init_status_flag_done = 1'b1;
 
     i_PowerDown          =  2'b10;     // P1
-    i_TxDetectRx         =  1'b1;        
+    i_TxDetectRx         =  1'b1;
     i_TxElecIdle         =  1'b1;      // Elec Idle
-    i_TxCompliance       =  {DATA_BYTES{1'b0}};      
-    i_RxPolarity         =  1'b0;      
-    i_TxData             =  {DATA_WIDTH{1'b0}};            
-    i_TxDataK            =  {DATA_BYTES{1'b0}};  
+    i_TxCompliance       =  {DATA_BYTES{1'b0}};
+    i_RxPolarity         =  1'b0;
+    i_TxData             =  {DATA_WIDTH{1'b0}};
+    i_TxDataK            =  {DATA_BYTES{1'b0}};
 */
     #30000;
 
     finalize;
 
     end // initial
-            
+

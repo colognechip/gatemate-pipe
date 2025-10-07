@@ -4,10 +4,10 @@
 
 #Choose testcase 
 
-echo -n -e "Available Testcases:\n 
-[1] : PIPE Testacase (16 Bit) \n 
-[2] : PIPE Testacase (64 Bit) \n 
-[3] : SerDes Only Testcase \n 
+echo -n -e "Available Testcases:\n
+[1] : PIPE Testacase (16 Bit) \n
+[2] : PIPE Testacase (64 Bit) \n
+[3] : SerDes Only Testcase \n
 Type Number to choose Testcase: "
 
 read VAR
@@ -28,7 +28,7 @@ else
 fi
 
 #TESTCASE=SERDES # Only SerDes
-#TESTCASE=PIPE # PIPE Interface 
+#TESTCASE=PIPE # PIPE Interface
 
 # If TESTCASE=PIPE, also choose Bitwidth of PIPE Iterface
 

@@ -3,12 +3,12 @@
 // Interessengruppe fuer Mikroelektronik und Eingebettete Systeme (IMES)
 // Fachhochschule Dortmund
 //
-// Development in cooperation with Cologne Chip AG 
+// Development in cooperation with Cologne Chip AG
 //
 // Filename     : tb_ccfpga_serdes.v
 // Author       : Philipp Leduc, S. Hartman (Author of Original Testbench Design)
-// Tool         : 
-// Description  : Testcase for PIPE Interface and SerDes of the Gatemate FPGA. 
+// Tool         :
+// Description  : Testcase for PIPE Interface and SerDes of the Gatemate FPGA.
 // Commentary   : Testbench is based on the former Testbench by RacyIC GmbH (tb_ccfpga_serdes.v).
 //                The Tesbench has been expanded to test SerDes and the PIPE.
 //
@@ -21,10 +21,10 @@
 //                2 > 16 Bit Datapath (PIPE)
 //                1 >  8 Bit Datapath (PIPE)
 //
-// Abreviations : [i_] > input, 
-//                [o_] > output, 
+// Abreviations : [i_] > input,
+//                [o_] > output,
 //                [_n] > low active
-//                
+//
 // Changelog:
 // -------------------------------------------------------------------------------------------------
 // Version | Author             | Date       | Changes
@@ -47,21 +47,21 @@ module tb_ccfpga_serdes ();
 
    // PIPE Parameter
 
-   parameter        DATA_BYTES = 8; 
+   parameter        DATA_BYTES = 8;
    parameter        DATA_WIDTH = DATA_BYTES*8;
 
    // Signals
 
-   // PIPE Interface 
+   // PIPE Interface
    wire                  o_PCLK;               // PCLK (user side)
-   reg                   i_Reset;              // Async. Reset for Transceiver (Tx/Rx)    
+   reg                   i_Reset;              // Async. Reset for Transceiver (Tx/Rx)
    reg            [ 1:0] i_PowerDown;          // Power States (P0 - P2)
    reg                   i_TxDetectRx;         // Receiver Detection (P0) or Loopback (P1)
    reg                   i_TxElecIdle;         // Tx Electrical Idle, Valid Data (P0) or Beacon (P2)
    reg  [DATA_BYTES-1:0] i_TxCompliance;       // Tx negative Disparity LSB (Compliance Pattern)
    //  wire                  i_TxSwing;        // Tx Voltage Swing Level [Optional by Spec]
    reg                   i_RxPolarity;         // Rx Polarity Inversion
-   wire                  o_RxValid;            // Symbol Lock and Valid Data on RxData and RxDataK   
+   wire                  o_RxValid;            // Symbol Lock and Valid Data on RxData and RxDataK
    wire                  o_PhyStatus;          // Status of several PHY functions (Transition)
    wire                  o_RxElecIdle;         // Rx Detection of Electrical Idle
    wire           [ 2:0] o_RxStatus;           // Receiver Status and Received Data Status
@@ -70,12 +70,12 @@ module tb_ccfpga_serdes ();
    wire [DATA_WIDTH-1:0] o_RxData;             // Rx Data
    wire [DATA_BYTES-1:0] o_RxDataK;            // Rx K Data
 
-   // Support Interface 
+   // Support Interface
 
-   wire                  o_tx_buf_error;       // Tx Buffer Error 
+   wire                  o_tx_buf_error;       // Tx Buffer Error
    wire                  o_clk_core_rx_rec;    // Rx Recovered Clock
    reg                   i_rx_buf_reset;       // Rx Buffer Reset
-   wire                  o_rx_buf_err;         // Rx Buffer Error 
+   wire                  o_rx_buf_err;         // Rx Buffer Error
    wire           [ 3:0] o_fsm_state_pipe;     // State of PIPE FSM
    wire           [ 1:0] o_fsm_state_align;    // State of Align FSM
 
@@ -109,7 +109,7 @@ module tb_ccfpga_serdes ();
    wire  [7:0] tx_8b10b_bypass;
    wire  [7:0] tx_char_dispmode;
    wire  [7:0] tx_char_dispval;
-   
+
    wire        rx_reset;
    wire        rx_pma_reset;
    wire        rx_eqa_reset;
@@ -170,7 +170,7 @@ module tb_ccfpga_serdes ();
    reg   [7:0] tx_8b10b_bypass    = 8'h0;
    reg   [7:0] tx_char_dispmode   = 8'h0;
    reg   [7:0] tx_char_dispval    = 8'h0;
-   
+
    reg         rx_reset = 1'b0;
    reg         rx_pma_reset       = 1'b0;
    reg         rx_eqa_reset       = 1'b0;
@@ -275,12 +275,12 @@ module tb_ccfpga_serdes ();
    parameter  [5:0] PLL_MAIN_DIVSEL          = {1'b0,2'b11,1'b0,2'b11}; // (Default = 27)
    parameter  [1:0] PLL_OUT_DIVSEL           = 2'b01;                   // (Default = 0 = T:1d)
 
-   parameter  [1:0] RX_DATAPATH_SEL          = 3;              // (Default = 3)  
+   parameter  [1:0] RX_DATAPATH_SEL          = 3;              // (Default = 3)
    parameter  [1:0] TX_DATAPATH_SEL          = 3;              // (Default = 3)
 
    parameter  [9:0] ALIGN_MCOMMA_VALUE       = 10'b1010000011; // (Default = 10'b1010000011)
    parameter  [9:0] ALIGN_PCOMMA_VALUE       = 10'b0101111100; // (Default = 10'b0101111100)
-   parameter  [9:0] ALIGN_COMMA_ENABLE       = 10'b1111111111; // (Default = FFF) : Maske 
+   parameter  [9:0] ALIGN_COMMA_ENABLE       = 10'b1111111111; // (Default = FFF) : Maske
    parameter  [1:0] ALIGN_COMMA_WORD         = 2'b11;          // (Default = 2'b00 : 8 Bit)
    parameter  [1:0] RX_SLIDE_MODE            = 0;
 
@@ -397,8 +397,8 @@ module tb_ccfpga_serdes ();
    ccfpga_serdes #(
       .TX_BUFFER_ADDR_WIDTH     ( TX_BUFFER_ADDR_WIDTH     ),
       .RX_WAIT_CDR_LOCK         ( RX_WAIT_CDR_LOCK         ),
-      .RX_RESETDONE_GATE        ( RX_RESETDONE_GATE        ),    
-      .RX_RESET_TIMER_PRESC     ( RX_RESET_TIMER_PRESC     ),   
+      .RX_RESETDONE_GATE        ( RX_RESETDONE_GATE        ),
+      .RX_RESET_TIMER_PRESC     ( RX_RESET_TIMER_PRESC     ),
       .RX_PMA_RESET_TIME        ( RX_PMA_RESET_TIME        ),
       .RX_EQA_RESET_TIME        ( RX_EQA_RESET_TIME        ),
       .RX_CDR_RESET_TIME        ( RX_CDR_RESET_TIME        ),
@@ -611,83 +611,83 @@ module tb_ccfpga_serdes ();
       .DATA_BYTES ( DATA_BYTES )
    )
    pipe_logic_inst ( 
-      .o_PCLK               ( o_PCLK             ),         
-      .i_Reset              ( i_Reset            ),        
-      .i_PowerDown          ( i_PowerDown        ),   
-      .i_TxDetectRx         ( i_TxDetectRx       ),  
-      .i_TxElecIdle         ( i_TxElecIdle       ),   
+      .o_PCLK               ( o_PCLK             ),
+      .i_Reset              ( i_Reset            ),
+      .i_PowerDown          ( i_PowerDown        ),
+      .i_TxDetectRx         ( i_TxDetectRx       ),
+      .i_TxElecIdle         ( i_TxElecIdle       ),
       .i_TxCompliance       ( i_TxCompliance     ), 
-      //.i_TxSwing          ( i_TxSwing          ),    
-      .i_RxPolarity         ( i_RxPolarity       ),   
-      .o_RxValid            ( o_RxValid          ),      
-      .o_PhyStatus          ( o_PhyStatus        ),    
-      .o_RxElecIdle         ( o_RxElecIdle       ),   
-      .o_RxStatus           ( o_RxStatus         ),     
-      .i_TxData             ( i_TxData           ),       
-      .i_TxDataK            ( i_TxDataK          ),      
-      .o_RxData             ( o_RxData           ),       
-      .o_RxDataK            ( o_RxDataK          ),      
-      .o_tx_buf_err         ( o_tx_buf_error     ),       
-      .o_clk_core_rx_rec    ( o_clk_core_rx_rec  ),    
-      .i_rx_buf_reset       ( i_rx_buf_reset     ),       
-      .o_rx_buf_err         ( o_rx_buf_err       ),         
-      .o_fsm_state_pipe     ( o_fsm_state_pipe   ),          
-      .o_fsm_state_align    ( o_fsm_state_align  ),   
-      .o_RxDataComma        ( o_RxDataComma      ),        
-      .o_RxDataDispErr      ( o_RxDataDispErr    ),      
-      .o_RxDataDecErr       ( o_RxDataDecErr     ),       
-      .i_clk_core_pll       ( clk_core_pll       ),       
-      .i_clk_core_rx_rec    ( clk_core_rx_rec    ),   
-      .o_clk_core_tx        ( clk_core_tx        ),        
-      .o_clk_core_rx        ( clk_core_rx_in     ),        
-      .o_pll_reset          ( pll_reset          ),          
-      .o_tx_reset           ( tx_reset           ),           
-      .i_tx_reset_done      ( tx_resetdone       ),      
-      .o_rx_reset           ( rx_reset           ),           
-      .i_rx_reset_done      ( rx_resetdone       ),      
-      .o_tx_pcs_reset       ( tx_pcs_reset       ),       
-      .o_tx_pma_reset       ( tx_pma_reset       ),       
-      .o_rx_pcs_reset       ( rx_pcs_reset       ),       
-      .o_rx_pma_reset       ( rx_pma_reset       ),       
-      .o_rx_cdr_reset       ( rx_cdr_reset       ),       
-      .o_rx_eqa_reset       ( rx_eqa_reset       ),       
-      .o_tx_powerdown_n     ( tx_powerdown_n     ),     
-      .o_rx_powerdown_n     ( rx_powerdown_n     ),     
-      .o_loopback           ( loopback           ),           
-      .o_rx_prbs_sel        ( rx_prbs_sel        ),       
-      .o_rx_prbs_cnt_reset  ( rx_prbs_cnt_reset  ),  
-      .o_tx_prbs_sel        ( tx_prbs_sel        ),        
-      .o_tx_prbs_force_err  ( tx_prbs_force_err  ),  
-      .o_rx_buf_reset       ( rx_buf_reset       ),       
-      .i_rx_buf_err         ( rx_buf_err         ),         
-      .i_tx_buf_err         ( tx_buf_err         ),         
-      .o_tx_data            ( tx_data            ),            
-      .o_tx_char_is_k       ( tx_char_is_k       ),       
-      .o_tx_char_dispmode   ( tx_char_dispmode   ),   
-      .o_tx_char_dispval    ( tx_char_dispval    ),    
-      .o_tx_8b10b_en        ( tx_8b10b_en        ),        
-      .o_tx_8b10b_bypass    ( tx_8b10b_bypass    ),    
-      .o_tx_polarity        ( tx_polarity        ),        
-      .o_tx_elec_idle       ( tx_elec_idle       ),       
-      .o_tx_detect_rx       ( tx_detect_rx       ),       
-      .i_rx_detect_done     ( rx_detect_done     ),     
-      .i_rx_present         ( rx_present         ),         
-      .i_rx_data            ( rx_data            ),            
-      .i_rx_char_is_k       ( rx_char_is_k       ),       
-      .i_rx_char_is_comma   ( rx_char_is_comma   ),   
-      .i_rx_disp_err        ( rx_disp_err        ),        
-      .i_rx_not_in_table    ( rx_not_in_table    ),    
-      .o_rx_8b10b_en        ( rx_8b10b_en        ),       
-      .o_rx_8b10b_bypass    ( rx_8b10b_bypass    ),    
-      .i_rx_byte_is_aligned ( rx_byte_is_aligned ), 
-      .i_rx_byte_realign    ( rx_byte_realign    ),    
-      .o_rx_mcomma_align    ( rx_mcomma_align    ),    
-      .o_rx_pcomma_align    ( rx_pcomma_align    ),    
-      .o_rx_comma_detect_en ( rx_comma_detect_en ), 
-      .o_rx_slide           ( rx_slide           ),           
-      .o_rx_polarity        ( rx_polarity        ),        
-      .o_rx_en_ei_detector  ( rx_en_ei_detector  ),  
-      .i_rx_ei_en           ( rx_ei_en           )        
+      //.i_TxSwing          ( i_TxSwing          ),
+      .i_RxPolarity         ( i_RxPolarity       ),
+      .o_RxValid            ( o_RxValid          ),
+      .o_PhyStatus          ( o_PhyStatus        ),
+      .o_RxElecIdle         ( o_RxElecIdle       ),
+      .o_RxStatus           ( o_RxStatus         ),
+      .i_TxData             ( i_TxData           ),
+      .i_TxDataK            ( i_TxDataK          ),
+      .o_RxData             ( o_RxData           ),
+      .o_RxDataK            ( o_RxDataK          ),
+      .o_tx_buf_err         ( o_tx_buf_error     ),
+      .o_clk_core_rx_rec    ( o_clk_core_rx_rec  ),
+      .i_rx_buf_reset       ( i_rx_buf_reset     ),
+      .o_rx_buf_err         ( o_rx_buf_err       ),
+      .o_fsm_state_pipe     ( o_fsm_state_pipe   ),
+      .o_fsm_state_align    ( o_fsm_state_align  ),
+      .o_RxDataComma        ( o_RxDataComma      ),
+      .o_RxDataDispErr      ( o_RxDataDispErr    ),
+      .o_RxDataDecErr       ( o_RxDataDecErr     ),
+      .i_clk_core_pll       ( clk_core_pll       ),
+      .i_clk_core_rx_rec    ( clk_core_rx_rec    ),
+      .o_clk_core_tx        ( clk_core_tx        ),
+      .o_clk_core_rx        ( clk_core_rx_in     ),
+      .o_pll_reset          ( pll_reset          ),
+      .o_tx_reset           ( tx_reset           ),
+      .i_tx_reset_done      ( tx_resetdone       ),
+      .o_rx_reset           ( rx_reset           ),
+      .i_rx_reset_done      ( rx_resetdone       ),
+      .o_tx_pcs_reset       ( tx_pcs_reset       ),
+      .o_tx_pma_reset       ( tx_pma_reset       ),
+      .o_rx_pcs_reset       ( rx_pcs_reset       ),
+      .o_rx_pma_reset       ( rx_pma_reset       ),
+      .o_rx_cdr_reset       ( rx_cdr_reset       ),
+      .o_rx_eqa_reset       ( rx_eqa_reset       ),
+      .o_tx_powerdown_n     ( tx_powerdown_n     ),
+      .o_rx_powerdown_n     ( rx_powerdown_n     ),
+      .o_loopback           ( loopback           ),
+      .o_rx_prbs_sel        ( rx_prbs_sel        ),
+      .o_rx_prbs_cnt_reset  ( rx_prbs_cnt_reset  ),
+      .o_tx_prbs_sel        ( tx_prbs_sel        ),
+      .o_tx_prbs_force_err  ( tx_prbs_force_err  ),
+      .o_rx_buf_reset       ( rx_buf_reset       ),
+      .i_rx_buf_err         ( rx_buf_err         ),
+      .i_tx_buf_err         ( tx_buf_err         ),
+      .o_tx_data            ( tx_data            ),
+      .o_tx_char_is_k       ( tx_char_is_k       ),
+      .o_tx_char_dispmode   ( tx_char_dispmode   ),
+      .o_tx_char_dispval    ( tx_char_dispval    ),
+      .o_tx_8b10b_en        ( tx_8b10b_en        ),
+      .o_tx_8b10b_bypass    ( tx_8b10b_bypass    ),
+      .o_tx_polarity        ( tx_polarity        ),
+      .o_tx_elec_idle       ( tx_elec_idle       ),
+      .o_tx_detect_rx       ( tx_detect_rx       ),
+      .i_rx_detect_done     ( rx_detect_done     ),
+      .i_rx_present         ( rx_present         ),
+      .i_rx_data            ( rx_data            ),
+      .i_rx_char_is_k       ( rx_char_is_k       ),
+      .i_rx_char_is_comma   ( rx_char_is_comma   ),
+      .i_rx_disp_err        ( rx_disp_err        ),
+      .i_rx_not_in_table    ( rx_not_in_table    ),
+      .o_rx_8b10b_en        ( rx_8b10b_en        ),
+      .o_rx_8b10b_bypass    ( rx_8b10b_bypass    ),
+      .i_rx_byte_is_aligned ( rx_byte_is_aligned ),
+      .i_rx_byte_realign    ( rx_byte_realign    ),
+      .o_rx_mcomma_align    ( rx_mcomma_align    ),
+      .o_rx_pcomma_align    ( rx_pcomma_align    ),
+      .o_rx_comma_detect_en ( rx_comma_detect_en ),
+      .o_rx_slide           ( rx_slide           ),
+      .o_rx_polarity        ( rx_polarity        ),
+      .o_rx_en_ei_detector  ( rx_en_ei_detector  ),
+      .i_rx_ei_en           ( rx_ei_en           )
       );
 
 `endif
@@ -695,8 +695,8 @@ module tb_ccfpga_serdes ();
    // Clock Generation
 
    parameter CLKPERIOD_REF = 10.0;  // ADPLL
-   parameter CLKPERIOD_REG = 8.0;   // Register 
-   parameter CLKPERIOD_CFG = 40.0;  // Config 
+   parameter CLKPERIOD_REG = 8.0;   // Register
+   parameter CLKPERIOD_CFG = 40.0;  // Config
 
    initial clk_ref = 1'b1;
    always #(CLKPERIOD_REF / 2) clk_ref = ~clk_ref;  // 100 MHz
@@ -712,18 +712,18 @@ module tb_ccfpga_serdes ();
    initial  // ADPLL
      begin
         reset_n = 1'b0;
-        #(CLKPERIOD_REF * 10 + 1);     
+        #(CLKPERIOD_REF * 10 + 1);
         reset_n = 1'b1;
      end
 
    initial  // Register
      begin
         reset_reg_n = 1'b0;
-        #(CLKPERIOD_REG * 10 + 1);     
+        #(CLKPERIOD_REG * 10 + 1);
         reset_reg_n = 1'b1;
      end
 
-   // Testbench Tasks and Functions 
+   // Testbench Tasks and Functions
 
    function real round(input real number);
       begin
@@ -992,7 +992,7 @@ module tb_ccfpga_serdes ();
               writeRegfile(8'h57, 16'h0004, 16'h0007);
               writeRegfile(8'h57, 16'h0005, 16'h0007);
            end
-         
+
          $display("INFO: Waiting for SerIO ADPLL to lock ...");
          start = $realtime;
          status = 16'h0;
