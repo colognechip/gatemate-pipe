@@ -36,16 +36,16 @@ fi
 #BITWIDTH=2
 
 #serdes file path
-SERDES_FILE_PATH=./tb
+SERDES_FILE_PATH=./sim
 
 #pipe file path
-PIPE_FILE_PATH=./ip_core
+PIPE_FILE_PATH=./src
 
 #serdes source path
-SERDES_SRC_PATH=./src
+SERDES_SRC_PATH=./serdes_src
 
 #Simulation dump file
-VCD=./sim/iverilog
+VCD=./sim
 
 #Verilog source
 VLOG_SRC=$(find ${PIPE_FILE_PATH} ${SERDES_SRC_PATH} -type f \( -iname \*.v -o -iname \*.sv \))
