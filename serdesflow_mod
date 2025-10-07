@@ -2,7 +2,7 @@
 
 # Default timescale is set to 1ns/100fs (common lowest precision)
 
-#Choose testcase 
+#Choose testcase
 
 echo -n -e "Available Testcases:\n
 [1] : PIPE Testacase (16 Bit) \n
@@ -61,4 +61,3 @@ ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SERDES_FIL
        -Ptb_ccfpga_serdes.DATA_BYTES=${BITWIDTH} -D${TESTCASE} -I${SERDES_FILE_PATH}
 
 ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
-

@@ -58,3 +58,4 @@ clean:
 	$(RM) *.cdf
 	$(RM) -rf net
 	$(RM) -rf log
+	$(RM) sim/*.vvp
