@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Default timescale is set to 1ns/100fs (common lowest precision)
+
+#Choose testcase 
+
+echo -n -e "Available Testcases:\n 
+[1] : PIPE Testacase (16 Bit) \n 
+[2] : PIPE Testacase (64 Bit) \n 
+[3] : SerDes Only Testcase \n 
+Type Number to choose Testcase: "
+
+read VAR
+
+if [[ $VAR -eq 1 ]]
+ then
+ echo -n -e "\nStarting  PIPE Testacase (16 Bit) \n\n"
+ TESTCASE=PIPE
+ BITWIDTH=2
+elif [[ $VAR -eq 2 ]]
+ then
+ echo -n -e "\nStarting  PIPE Testacase (64 Bit) \n\n"
+ TESTCASE=PIPE
+ BITWIDTH=8
+else
+ echo -n -e "\nStarting  SerDes Only Testcase\n\n"
+ TESTCASE=SERDES
+fi
+
+#TESTCASE=SERDES # Only SerDes
+#TESTCASE=PIPE # PIPE Interface 
+
+# If TESTCASE=PIPE, also choose Bitwidth of PIPE Iterface
+
+#BITWIDTH=8
+#BITWIDTH=2
+
+#serdes file path
+SERDES_FILE_PATH=./tb
+
+#pipe file path
+PIPE_FILE_PATH=./ip_core
+
+#serdes source path
+SERDES_SRC_PATH=./src
+
+#Simulation dump file
+VCD=./sim/iverilog
+
+#Verilog source
+VLOG_SRC=$(find ${PIPE_FILE_PATH} ${SERDES_SRC_PATH} -type f \( -iname \*.v -o -iname \*.sv \))
+
+#Simulation environment
+IVL=iverilog
+VVP=vvp
+
+mkdir -p sim/
+rm -f ${VCD}/vlog_sim.${VVP}
+
+${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SERDES_FILE_PATH}/tb_ccfpga_serdes.v \
+       -Ptb_ccfpga_serdes.DATA_BYTES=${BITWIDTH} -D${TESTCASE} -I${SERDES_FILE_PATH}
+
+${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
+
