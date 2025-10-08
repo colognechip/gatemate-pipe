@@ -39,23 +39,7 @@ clean:
 	$(RM) net/*_synth.v
 	$(RM) work-obj*.cf
 	$(RM) *.txt
-	$(RM) *.crf
-	$(RM) *.refwire
-	$(RM) *.refparam
-	$(RM) *.refcomp
-	$(RM) *.pos
-	$(RM) *.pathes
-	$(RM) *.path_struc
-	$(RM) *.net
-	$(RM) *.id
-	$(RM) *.prn
-	$(RM) *_00.v
-	$(RM) *.used
 	$(RM) *.sdf
-	$(RM) *.place
-	$(RM) *.pin
-	$(RM) *.cfg*
-	$(RM) *.cdf
 	$(RM) -rf net
 	$(RM) -rf log
 	$(RM) sim/*.vvp
