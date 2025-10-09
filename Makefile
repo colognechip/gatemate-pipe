@@ -43,3 +43,4 @@ clean:
 	$(RM) -rf net
 	$(RM) -rf log
 	$(RM) sim/*.vvp
+	$(RM) *.bit
