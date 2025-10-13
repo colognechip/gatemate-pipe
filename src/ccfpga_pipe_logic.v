@@ -159,9 +159,6 @@ module ccfpga_pipe_logic #(
 
    output wire                  o_rx_en_ei_detector,  // Rx Electrical Idle Detection Enable
    input  wire                  i_rx_ei_en,           // Rx Electrical Idle Detection Response
-
-   // Reference clock
-   input wire                   ref_clk               // 
    );
 
    wire                  s_reset, s_clk;
