@@ -51,7 +51,7 @@ module ccfpga_pipe_logic #(
    input  wire           [ 1:0] i_PowerDown,    // Power States (P0 - P2)
    input  wire                  i_TxDetectRx,   // Receiver Detection (P0) or Loopback (P1)
    input  wire                  i_TxElecIdle,   // Tx Electrical Idle, Valid Data (P0) or Beacon (P2)
-   //input  wire [DATA_BYTES-1:0] i_TxCompliance, // Tx negative Disparity LSB (Compliance Pattern)
+   input  wire [DATA_BYTES-1:0] i_TxCompliance, // Tx negative Disparity LSB (Compliance Pattern)
    //input  wire                  i_TxSwing,    // Tx Voltage Swing Level [Optional by Spec]
    input  wire                  i_RxPolarity,   // Rx Polarity Inversion
 
@@ -62,12 +62,12 @@ module ccfpga_pipe_logic #(
    output wire           [ 2:0] o_RxStatus,     // Receiver Status and Received Data Status
 
    // Transmit Data
-   //input  wire [DATA_WIDTH-1:0] i_TxData,       // Tx Data
-   //input  wire [DATA_BYTES-1:0] i_TxDataK,      // Tx K Data
+   input  wire [DATA_WIDTH-1:0] i_TxData,       // Tx Data
+   input  wire [DATA_BYTES-1:0] i_TxDataK,      // Tx K Data
 
    // Receive Data
-   //output wire [DATA_WIDTH-1:0] o_RxData,       // Rx Data
-   //output wire [DATA_BYTES-1:0] o_RxDataK,      // Rx K Data
+   output wire [DATA_WIDTH-1:0] o_RxData,       // Rx Data
+   output wire [DATA_BYTES-1:0] o_RxDataK,      // Rx K Data
 
    // -------------- CSS INTERFACE PORTS ------------------
 
@@ -78,9 +78,9 @@ module ccfpga_pipe_logic #(
    output wire            [3:0] o_fsm_state_pipe,   // State of PIPE FSM
    output wire            [1:0] o_fsm_state_align,  // State of Align FSM
 
-   //output wire [DATA_BYTES-1:0] o_RxDataComma,        // Rx Byte Comma Indication
-   //output wire [DATA_BYTES-1:0] o_RxDataDispErr,      // Rx Byte Disparity Error Indication
-   //output wire [DATA_BYTES-1:0] o_RxDataDecErr,       // Rx Byte Decode Error Indication
+   output wire [DATA_BYTES-1:0] o_RxDataComma,        // Rx Byte Comma Indication
+   output wire [DATA_BYTES-1:0] o_RxDataDispErr,      // Rx Byte Disparity Error Indication
+   output wire [DATA_BYTES-1:0] o_RxDataDecErr,       // Rx Byte Decode Error Indication
    //output wire                  o_TxIdleEntry,        // Tx Electrical Idle Counter Flag
 
    // -------------- CCAG SERDES PORTS --------------------
@@ -124,7 +124,7 @@ module ccfpga_pipe_logic #(
    input  wire                  i_tx_buf_err,         // Tx Buffer Error (Over- or Underflow)
 
    // Tx-Datapath
-   //output wire           [63:0] o_tx_data,            // Tx Data
+   output wire           [63:0] o_tx_data,            // Tx Data
    output wire           [ 7:0] o_tx_char_is_k,       // Tx K-Data
    output wire           [ 7:0] o_tx_char_dispmode,   // Tx Disparity Enable
    output wire           [ 7:0] o_tx_char_dispval,    // Tx Disparity Values (0:neg, 1:pos)
@@ -140,7 +140,7 @@ module ccfpga_pipe_logic #(
    input  wire                  i_rx_present,         // Tx Receiver Detection Response (1: Present)
 
    // Rx-Datapath
-   //input  wire           [63:0] i_rx_data,            // Rx Data
+   input  wire           [63:0] i_rx_data,            // Rx Data
    input  wire           [ 7:0] i_rx_char_is_k,       // Rx K Data
    input  wire           [ 7:0] i_rx_char_is_comma,   // Rx COM Data
    input  wire           [ 7:0] i_rx_disp_err,        // Rx Disparity Error
@@ -163,19 +163,6 @@ module ccfpga_pipe_logic #(
    // Reference clock
    input wire                   ref_clk               // 
    );
-
-   wire [DATA_WIDTH-1:0] i_TxData;       // Tx Data
-   wire [DATA_BYTES-1:0] i_TxDataK;      // Tx K Data
-
-   // Receive Data
-   wire [DATA_WIDTH-1:0] o_RxData;       // Rx Data
-   wire [DATA_BYTES-1:0] o_RxDataK;      // Rx K Data
-   wire           [63:0] i_rx_data;            // Rx Data
-   wire           [63:0] o_tx_data;            // Tx Data
-   wire [DATA_BYTES-1:0] i_TxCompliance; // Tx negative Disparity LSB (Compliance Pattern)
-   wire [DATA_BYTES-1:0] o_RxDataComma;        // Rx Byte Comma Indication
-   wire [DATA_BYTES-1:0] o_RxDataDispErr;      // Rx Byte Disparity Error Indication
-   wire [DATA_BYTES-1:0] o_RxDataDecErr;       // Rx Byte Decode Error Indication
 
    wire                  s_reset, s_clk;
    wire                  s_sel_rx_status;  // Mux Select Signal for RxStatus
