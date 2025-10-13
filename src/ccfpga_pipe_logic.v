@@ -51,7 +51,7 @@ module ccfpga_pipe_logic #(
    input  wire           [ 1:0] i_PowerDown,    // Power States (P0 - P2)
    input  wire                  i_TxDetectRx,   // Receiver Detection (P0) or Loopback (P1)
    input  wire                  i_TxElecIdle,   // Tx Electrical Idle, Valid Data (P0) or Beacon (P2)
-   input  wire [DATA_BYTES-1:0] i_TxCompliance, // Tx negative Disparity LSB (Compliance Pattern)
+   //input  wire [DATA_BYTES-1:0] i_TxCompliance, // Tx negative Disparity LSB (Compliance Pattern)
    //input  wire                  i_TxSwing,    // Tx Voltage Swing Level [Optional by Spec]
    input  wire                  i_RxPolarity,   // Rx Polarity Inversion
 
@@ -62,12 +62,12 @@ module ccfpga_pipe_logic #(
    output wire           [ 2:0] o_RxStatus,     // Receiver Status and Received Data Status
 
    // Transmit Data
-   input  wire [DATA_WIDTH-1:0] i_TxData,       // Tx Data
-   input  wire [DATA_BYTES-1:0] i_TxDataK,      // Tx K Data
+   //input  wire [DATA_WIDTH-1:0] i_TxData,       // Tx Data
+   //input  wire [DATA_BYTES-1:0] i_TxDataK,      // Tx K Data
 
    // Receive Data
-   output wire [DATA_WIDTH-1:0] o_RxData,       // Rx Data
-   output wire [DATA_BYTES-1:0] o_RxDataK,      // Rx K Data
+   //output wire [DATA_WIDTH-1:0] o_RxData,       // Rx Data
+   //output wire [DATA_BYTES-1:0] o_RxDataK,      // Rx K Data
 
    // -------------- CSS INTERFACE PORTS ------------------
 
@@ -78,9 +78,9 @@ module ccfpga_pipe_logic #(
    output wire            [3:0] o_fsm_state_pipe,   // State of PIPE FSM
    output wire            [1:0] o_fsm_state_align,  // State of Align FSM
 
-   output wire [DATA_BYTES-1:0] o_RxDataComma,        // Rx Byte Comma Indication
-   output wire [DATA_BYTES-1:0] o_RxDataDispErr,      // Rx Byte Disparity Error Indication
-   output wire [DATA_BYTES-1:0] o_RxDataDecErr,       // Rx Byte Decode Error Indication
+   //output wire [DATA_BYTES-1:0] o_RxDataComma,        // Rx Byte Comma Indication
+   //output wire [DATA_BYTES-1:0] o_RxDataDispErr,      // Rx Byte Disparity Error Indication
+   //output wire [DATA_BYTES-1:0] o_RxDataDecErr,       // Rx Byte Decode Error Indication
    //output wire                  o_TxIdleEntry,        // Tx Electrical Idle Counter Flag
 
    // -------------- CCAG SERDES PORTS --------------------
@@ -124,7 +124,7 @@ module ccfpga_pipe_logic #(
    input  wire                  i_tx_buf_err,         // Tx Buffer Error (Over- or Underflow)
 
    // Tx-Datapath
-   output wire           [63:0] o_tx_data,            // Tx Data
+   //output wire           [63:0] o_tx_data,            // Tx Data
    output wire           [ 7:0] o_tx_char_is_k,       // Tx K-Data
    output wire           [ 7:0] o_tx_char_dispmode,   // Tx Disparity Enable
    output wire           [ 7:0] o_tx_char_dispval,    // Tx Disparity Values (0:neg, 1:pos)
@@ -140,7 +140,7 @@ module ccfpga_pipe_logic #(
    input  wire                  i_rx_present,         // Tx Receiver Detection Response (1: Present)
 
    // Rx-Datapath
-   input  wire           [63:0] i_rx_data,            // Rx Data
+   //input  wire           [63:0] i_rx_data,            // Rx Data
    input  wire           [ 7:0] i_rx_char_is_k,       // Rx K Data
    input  wire           [ 7:0] i_rx_char_is_comma,   // Rx COM Data
    input  wire           [ 7:0] i_rx_disp_err,        // Rx Disparity Error
@@ -158,8 +158,24 @@ module ccfpga_pipe_logic #(
    output wire                  o_rx_polarity,        // Rx Polarity Control
 
    output wire                  o_rx_en_ei_detector,  // Rx Electrical Idle Detection Enable
-   input  wire                  i_rx_ei_en            // Rx Electrical Idle Detection Response
+   input  wire                  i_rx_ei_en,           // Rx Electrical Idle Detection Response
+
+   // Reference clock
+   input wire                   ref_clk               // 
    );
+
+   wire [DATA_WIDTH-1:0] i_TxData;       // Tx Data
+   wire [DATA_BYTES-1:0] i_TxDataK;      // Tx K Data
+
+   // Receive Data
+   wire [DATA_WIDTH-1:0] o_RxData;       // Rx Data
+   wire [DATA_BYTES-1:0] o_RxDataK;      // Rx K Data
+   wire           [63:0] i_rx_data;            // Rx Data
+   wire           [63:0] o_tx_data;            // Tx Data
+   wire [DATA_BYTES-1:0] i_TxCompliance; // Tx negative Disparity LSB (Compliance Pattern)
+   wire [DATA_BYTES-1:0] o_RxDataComma;        // Rx Byte Comma Indication
+   wire [DATA_BYTES-1:0] o_RxDataDispErr;      // Rx Byte Disparity Error Indication
+   wire [DATA_BYTES-1:0] o_RxDataDecErr;       // Rx Byte Decode Error Indication
 
    wire                  s_reset, s_clk;
    wire                  s_sel_rx_status;  // Mux Select Signal for RxStatus
@@ -178,6 +194,10 @@ module ccfpga_pipe_logic #(
 
    localparam CNT_BITWIDTH_TX =  (DATA_BYTES == 2) ? 32'd4 : 32'd3;
    localparam CNT_NUMBER_TX   =  (DATA_BYTES == 2) ? 32'd9 : 32'd2;
+
+   // Parameters for PLL
+
+   localparam PLL_MUL =  (DATA_BYTES == 1) ? 32'd8 : (DATA_BYTES == 2) ? 32'd4 : 32'd2;
 
    // Constant Port Value Assignments
 
@@ -371,30 +391,29 @@ module ccfpga_pipe_logic #(
          //assign s_reset_done = s_pll_locked & i_rx_reset_done & i_tx_reset_done;
          assign s_reset_done = s_pll_locked & i_tx_reset_done;
 
-
          // Additional PLL for PCLK
-
-         localparam [8*47:1] PLL_PARAM =  (DATA_BYTES == 1) ? " 82, 20, 04, 08, 01, 04, 00, 64, 10, 01, CB, 01" :
-                                          (DATA_BYTES == 2) ? " 82, 20, 04, 10, 01, 04, 00, 64, 10, 01, CB, 01" :
-                                          (DATA_BYTES == 4) ? " 82, 20, 04, 10, 02, 04, 00, 64, 10, 01, CB, 01" : "X";
+         parameter OUT_CLK = 31.25 * PLL_MUL;
 
          CC_PLL #(
-            .CCAG_CFG_PARAM       ( PLL_PARAM      )
-            )
-         i_cc_pll_0 (
-            .CLK_REF              ( i_clk_core_pll ),  // Refclk ADPLL
-            .CLK_FEEDBACK         ( 1'b0           ),  // (const value)
-            .USER_CLK_REF         ( 1'b0           ),  // (const value)
-            .USER_LOCKED_STDY_RST ( 1'b1           ),  // Reset Locked state
-            .USER_SET_SEL         ( 1'b0           ),  // (const value)
-            .USER_PLL_LOCKED_STDY (                ),  // (float)
-            .USER_PLL_LOCKED      ( s_pll_locked   ),  // Locked state
-            .CLK270               (                ),  // (float)
-            .CLK180               (                ),  // (float)
-            .CLK90                (                ),  // (float)
-            .CLK0                 ( s_clk          ),  // PCLK
-            .CLK_REF_OUT          (                )   // (float)
-            );
+            .REF_CLK(31.25),      // reference input in MHz
+            .OUT_CLK(OUT_CLK),     // pll output frequency in MHz
+            .PERF_MD("ECONOMY"), // LOWPOWER, ECONOMY, SPEED
+            .LOW_JITTER(1),      // 0: disable, 1: enable low jitter mode
+            .CI_FILTER_CONST(2), // optional CI filter constant
+            .CP_FILTER_CONST(4)  // optional CP filter constant
+         ) pll_inst (
+            .CLK_REF(),
+            .CLK_FEEDBACK(1'b0),
+            .USR_CLK_REF(i_clk_core_pll),
+            .USR_LOCKED_STDY_RST(1'b1),
+            .USR_PLL_LOCKED_STDY(),
+            .USR_PLL_LOCKED(s_pll_locked),
+            .CLK270(),
+            .CLK180(),
+            .CLK90(),
+            .CLK0(s_clk),
+            .CLK_REF_OUT()
+         );
 
          // Tx Datapath Demuliplexer
          ccfpga_pipe_tx_demux #(
