@@ -181,7 +181,18 @@ module ccfpga_pipe_logic #(
 
    // Parameters for PLL
 
-   localparam PLL_MUL =  (DATA_BYTES == 1) ? 32'd8 : (DATA_BYTES == 2) ? 32'd4 : 32'd2;
+   localparam       PLL_MUL                  =  (DATA_BYTES == 1) ? 32'd8 : (DATA_BYTES == 2) ? 32'd4 : (DATA_BYTES == 4) ? 32'd2 : 32'd1;
+   localparam       DATAPATH_WIDTH           =  32'd80;
+
+   parameter  [5:0] PLL_FCNTRL               = 58;                      // (Default = 58 = T:20d)
+   parameter  [5:0] PLL_MAIN_DIVSEL          = {1'b0,2'b11,1'b0,2'b11}; // (Default = 27)
+   parameter        N1                       = PLL_MAIN_DIVSEL[2] == 1'b0 ? 32'd1 : 32'd2;
+   parameter        N2                       = PLL_MAIN_DIVSEL[1:0] == 2'b00 ? 32'd3 : PLL_MAIN_DIVSEL[1:0] == 2'b01 ? 32'd2 : PLL_MAIN_DIVSEL[1:0] == 2'b10 ? 32'd4 : 32'd5;
+   parameter        N3                       = PLL_MAIN_DIVSEL[4:3] == 2'b00 ? 32'd3 : PLL_MAIN_DIVSEL[4:3] == 2'b10 ? 32'd4 : PLL_MAIN_DIVSEL[4:3] == 2'b11 ? 32'd5 : 32'd1;
+   parameter  [1:0] PLL_OUT_DIVSEL           = 2'b01;                   // (Default = 0 = T:1d)
+   parameter        M3                       = PLL_OUT_DIVSEL == 2'b00 ? 32'd1 : PLL_OUT_DIVSEL == 2'b01 ? 32'd2 : PLL_OUT_DIVSEL == 2'b11 ? 32'd4 : 32'd1;
+   parameter        DPC                      = (32'd100 * N1 * N2 * N3 * 32'd2) / (M3 * DATAPATH_WIDTH);
+   parameter        OUT_CLK                  = DPC * PLL_MUL;
 
    // Constant Port Value Assignments
 
@@ -375,13 +386,10 @@ module ccfpga_pipe_logic #(
          //assign s_reset_done = s_pll_locked & i_rx_reset_done & i_tx_reset_done;
          assign s_reset_done = s_pll_locked & i_tx_reset_done;
 
-         // Additional PLL for PCLK
-         parameter OUT_CLK = 31.25 * PLL_MUL;
-
          CC_PLL #(
-            .REF_CLK(31.25),      // reference input in MHz
-            .OUT_CLK(OUT_CLK),     // pll output frequency in MHz
-            .PERF_MD("ECONOMY"), // LOWPOWER, ECONOMY, SPEED
+            .REF_CLK(DPC),       // reference input in MHz
+            .OUT_CLK(OUT_CLK),   // pll output frequency in MHz
+            .PERF_MD("SPEED"), // LOWPOWER, ECONOMY, SPEED
             .LOW_JITTER(1),      // 0: disable, 1: enable low jitter mode
             .CI_FILTER_CONST(2), // optional CI filter constant
             .CP_FILTER_CONST(4)  // optional CP filter constant
