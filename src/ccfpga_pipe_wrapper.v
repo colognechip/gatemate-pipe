@@ -19,7 +19,7 @@ module ccfpga_pipe_wrapper #(
    output wire                  o_RxValid,      // Received data is valid
    output wire                  o_PhyStatus,    // Physical Status
    output wire            [2:0] o_RxStatus,     // Receiver Status
-   output wire                  o_RxElecIdle,   // Electrical Idle at Receiver
+   output wire                  o_RxElecIdle    // Electrical Idle at Receiver
    output wire [DATA_WIDTH-1:0] o_RxData,       // Rx Data
    output wire [DATA_BYTES-1:0] o_RxDataK       // Rx K Data
    );
