@@ -5,9 +5,9 @@ NEXTPNR = nextpnr-himbaechel
 PACK = gmpack
 OFL = openFPGALoader
 
-TOP = ccfpga_pipe_logic
+TOP = ccfpga_pipe_wrapper
 PRFLAGS  = -ccf src/$(TOP).ccf -cCP -crc
-NEXTPNRFLAGS = --vopt allow-unconstrained
+NEXTPNRFLAGS = --vopt allow-unconstrained --vopt fpga_mode=typical 
 OFLFLAGS = --index-chain 0
 
 ## target sources
