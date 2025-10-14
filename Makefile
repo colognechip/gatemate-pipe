@@ -7,7 +7,7 @@ OFL = openFPGALoader
 
 TOP = ccfpga_pipe_wrapper
 PRFLAGS  = -ccf src/$(TOP).ccf -cCP -crc
-NEXTPNRFLAGS = --vopt allow-unconstrained --vopt fpga_mode=typical 
+NEXTPNRFLAGS = --vopt allow-unconstrained --vopt fpga_mode=typical --seed 1 --placer-heap-beta 0.2
 OFLFLAGS = --index-chain 0
 
 ## target sources
