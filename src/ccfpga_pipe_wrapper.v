@@ -1,7 +1,7 @@
 `timescale 1ns/100fs
 
 module ccfpga_pipe_wrapper #(
-   parameter DATA_BYTES = 1,
+   parameter DATA_BYTES = 8,
    parameter DATA_WIDTH = DATA_BYTES*8
    )
    (
@@ -11,22 +11,19 @@ module ccfpga_pipe_wrapper #(
    input wire                   i_TxElecIdle,   // Electrical Idle
    input wire  [DATA_BYTES-1:0] i_TxCompliance, // Compliance Pattern
    input wire                   i_RxPolarity,   // Received data polarity
-   //input wire  [DATA_WIDTH-1:0] i_TxData,       // Tx Data
-   //input wire  [DATA_BYTES-1:0] i_TxDataK,      // Tx K Data
+   input wire  [DATA_WIDTH-1:0] i_TxData,       // Tx Data
+   input wire  [DATA_BYTES-1:0] i_TxDataK,      // Tx K Data
    //input wire                   i_TxSwing,      // Tx Voltage Swing Level [Optional by Spec]
 
    output wire                  o_PCLK,         // Parallel Interface Clock
    output wire                  o_RxValid,      // Received data is valid
    output wire                  o_PhyStatus,    // Physical Status
    output wire            [2:0] o_RxStatus,     // Receiver Status
-   output wire                  o_RxElecIdle   // Electrical Idle at Receiver
-   //output wire [DATA_WIDTH-1:0] o_RxData,       // Rx Data
-   //output wire [DATA_BYTES-1:0] o_RxDataK       // Rx K Data
+   output wire                  o_RxElecIdle,   // Electrical Idle at Receiver
+   output wire [DATA_WIDTH-1:0] o_RxData,       // Rx Data
+   output wire [DATA_BYTES-1:0] o_RxDataK       // Rx K Data
    );
-   wire  [DATA_WIDTH-1:0] i_TxData;       // Tx Data
-   wire  [DATA_BYTES-1:0] i_TxDataK;      // Tx K Data
-   wire [DATA_WIDTH-1:0] o_RxData;       // Rx Data
-   wire [DATA_BYTES-1:0] o_RxDataK;       // Rx K Data
+
    // CSS Interface
 
    wire                  o_tx_buf_err;         // Tx Buffer Error
