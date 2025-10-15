@@ -40,6 +40,11 @@ The schematic below illustrates the configuration for the **64-Bit datapath** ca
 | 110             | Elastic Buffer Underflow              |
 | 111             | Disparity Error. Unused if <br>reported together with <br>8b/10b Error (100)              |
 
+## Power states in PIPE Interface and their relation to power states in LTSSM
+Currently, the PIPE interface supports only two power states: **P0** and **P1**. The **P0** state corresponds to normal operation on the transmission line, while the **P1** state represents the PHY’s powered-off mode. The relationship between these PIPE power states and the LTSSM power states is illustrated in the diagram below.
+
+<img src="./images/pcie-pipe-power-management-process.webp" width=350 height=362 />
+
 ## Prerequisites 
 The simulation can be run using the [Gatemate open source toolchain](https://colognechip.com/programmable-logic/gatemate/toolchain/).
 
@@ -53,3 +58,4 @@ The testbench begins by performing several key state transitions within the PIPE
 
 ## References
 - [PIPE Specs, Sept. 2025, v7.1](https://cdrdv2-public.intel.com/643108/643108_PIPE_Arch_Spec_Rev_7_1.pdf)
+- [Optimizing PCIe PIPE Interface Power Management](https://www.synopsys.com/blogs/chip-design/optimizing-pcie-pipe-power-management.html)
