@@ -5,9 +5,9 @@ NEXTPNR = nextpnr-himbaechel
 PACK = gmpack
 OFL = openFPGALoader
 
-TOP = ccfpga_pipe_wrapper
+TOP = ccfpga_pipe_test
 PRFLAGS  = -ccf src/$(TOP).ccf -cCP -crc
-NEXTPNRFLAGS = --vopt allow-unconstrained --vopt fpga_mode=typical --seed 1 --placer-heap-beta 0.2
+NEXTPNRFLAGS =
 OFLFLAGS = --index-chain 0
 
 ## target sources
@@ -32,6 +32,9 @@ $(TOP).bit: $(TOP).txt
 
 jtag: $(TOP).bit
 	$(OFL) $(OFLFLAGS) -b gatemate_evb_jtag $(TOP).bit
+
+spi: $(TOP).bit
+	$(OFL) $(OFLFLAGS) -b gatemate_evb_spi -m $(TOP).bit
 
 clean:
 	$(RM) rm log/*.log
