@@ -30,7 +30,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 module ccfpga_pipe_rx_mux #(
-  parameter DATA_BYTES = 2,                 // Set to configure width of used pipe datapath
+  parameter DATA_BYTES = 4,                 // Set to configure width of used pipe datapath
   parameter DATA_WIDTH = DATA_BYTES*8       // Used to configure bitwidth of datapath
   )
   (
@@ -74,7 +74,7 @@ module ccfpga_pipe_rx_mux #(
   // clocked mux for data
   always@(posedge i_clk, posedge i_reset) begin
       if(i_reset == 1'b1) begin
-        s_msb  <= 6'd63;
+        s_msb  <= MSB_INIT;
         end
       else begin
         if (i_enable == 1'b1) begin
@@ -89,7 +89,7 @@ module ccfpga_pipe_rx_mux #(
   // clocked mux for k data, comma, error signals
   always@ (posedge i_clk, posedge i_reset) begin
       if(i_reset == 1'b1) begin
-        s_msb_k    <= 3'd7;
+        s_msb_k    <= MSB_INIT_K;
         end
       else begin
         if (i_enable == 1'b1) begin

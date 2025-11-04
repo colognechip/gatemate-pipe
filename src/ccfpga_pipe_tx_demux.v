@@ -27,7 +27,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 module ccfpga_pipe_tx_demux #(
-    parameter DATA_BYTES = 2,               // Set to configure width of used datapath (PIPE)
+    parameter DATA_BYTES = 4,               // Set to configure width of used datapath (PIPE)
     parameter DATA_WIDTH  = DATA_BYTES*8    // Used to configure bitwidth of datapath
     )
     (
@@ -264,4 +264,5 @@ module ccfpga_pipe_tx_demux #(
         end
       end
     endgenerate
+
 endmodule

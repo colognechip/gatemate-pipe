@@ -45,6 +45,7 @@ module ccfpga_pipe_logic #(
    // -------------- PIPE INTERFACE PORTS -----------------
    // External
    output wire                  o_PCLK,         // PCLK (user side)
+   output wire                  o_tx_clk,       // Tx Clock (user side)
 
    // Command
    input  wire                  i_Reset,        // Async. Reset for Transceiver (Tx/Rx)
@@ -161,7 +162,9 @@ module ccfpga_pipe_logic #(
    input  wire                  i_rx_ei_en            // Rx Electrical Idle Detection Response
    );
 
-   wire                  s_reset, s_clk;
+   wire                  s_reset;
+   wire                  s_clk;
+   wire                  s_tx_clk;
    wire                  s_sel_rx_status;  // Mux Select Signal for RxStatus
    wire            [2:0] s_rx_status_dp;   // RxStatus Signal from Rx Datapath
    wire            [2:0] s_rx_status_fsm;  // RxStatus Signal from FSM (Rx Detection)
@@ -182,6 +185,7 @@ module ccfpga_pipe_logic #(
    // Parameters for PLL
 
    localparam       PLL_MUL                  =  (DATA_BYTES == 1) ? 32'd8 : (DATA_BYTES == 2) ? 32'd4 : (DATA_BYTES == 4) ? 32'd2 : 32'd1;
+   localparam       DIVIDER                  =  (DATA_BYTES == 8) ? 32'd2 : 32'd1;
    localparam       DATAPATH_WIDTH           =  32'd80;
 
    parameter  [5:0] PLL_FCNTRL               = 58;                      // (Default = 58 = T:20d)
@@ -224,12 +228,13 @@ module ccfpga_pipe_logic #(
    assign o_tx_powerdown_n     = 1'b1;
    assign o_rx_powerdown_n     = 1'b1;
 
-   assign o_rx_en_ei_detector  = 1'b1;
+   assign o_rx_en_ei_detector  = 1'h0; // old: 1'b1;
 
    assign o_tx_char_dispval    = 8'b0000_0000;
 
    // Clock
    assign o_PCLK            = s_clk;
+   assign o_tx_clk          = s_tx_clk;
 
    assign o_clk_core_tx     = i_clk_core_pll;
    assign o_clk_core_rx     = i_clk_core_pll;
@@ -329,13 +334,20 @@ module ccfpga_pipe_logic #(
       .o_flag  ( s_count_flag        )
       );
 
+   // Tx clock generator (Clock Divider)
+   ccfpga_pipe_clk_divider #(
+      .DIVIDER ( DIVIDER )
+   ) clk_div_inst (
+      .clk_in  ( i_clk_core_pll ),
+      .s_reset ( s_reset        ),
+      .clk_out ( s_tx_clk       )
+   );
 
    generate
       if (DATA_BYTES == 8) begin // 64-Bit PIPE
 
          // Clock
-         assign s_clk = i_clk_core_pll;
-
+         assign s_clk = s_tx_clk;
 
          // Reset Logic (excludes PLL)
          //assign s_reset_done = i_rx_reset_done & i_tx_reset_done;
@@ -370,10 +382,10 @@ module ccfpga_pipe_logic #(
 
         end
 
-      else begin // 8-Bit / 16-Bit / 32-Bit PIPE
+      else begin // 32-Bit PIPE
 
          wire [7:0] s_neg_disparity;
-         wire       s_pll_locked;
+         //wire       s_pll_locked;
 
          // Disparity (Enable and Value)
          assign o_tx_char_dispmode = s_neg_disparity;
@@ -384,9 +396,10 @@ module ccfpga_pipe_logic #(
 
          // Reset Logic (includes PLL)
          //assign s_reset_done = s_pll_locked & i_rx_reset_done & i_tx_reset_done;
-         assign s_reset_done = s_pll_locked & i_tx_reset_done;
+         //assign s_reset_done = s_pll_locked & i_tx_reset_done;
+         assign s_reset_done = i_tx_reset_done;
 
-         CC_PLL #(
+         /*CC_PLL #(
             .REF_CLK(DPC),       // reference input in MHz
             .OUT_CLK(OUT_CLK),   // pll output frequency in MHz
             .PERF_MD("SPEED"), // LOWPOWER, ECONOMY, SPEED
@@ -405,7 +418,8 @@ module ccfpga_pipe_logic #(
             .CLK90(),
             .CLK0(s_clk),
             .CLK_REF_OUT()
-         );
+         );*/
+         assign s_clk = i_clk_core_pll;
 
          // Tx Datapath Demuliplexer
          ccfpga_pipe_tx_demux #(
