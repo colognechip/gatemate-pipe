@@ -6,7 +6,7 @@ The **PHY Interface for the PCI Express Architecture (PIPE)** is part of the phy
 <img src="./images/PIPE_Position.png" width=300 height=330 />
 
 ## The Interface
-The schematic below illustrates the configuration for the **64-Bit datapath** case. In this case the `o_PCLK` output is directly connected to `clk_core_pll` from SerDes as both domains have the same bus width. The PLL used to generate `o_PCLK` signal is only needed in case of shorter datapath, e.g. PLL would generate `o_PCLK` running at 4 times the frequency of `clk_core_pll` for **16-Bit datapath**. This is done to assure the synchronization between MAC and PHY layer.
+The schematic below illustrates the configuration for the **64-Bit datapath** case. In this configuration, the `o_PCLK` output operates at the same frequency as the **SERDES TX_clock**. For smaller datapath widths, however,`o_PCLK` runs at a frequency that is a multiple of the **TX_clock** frequency, depending on the datapath ratio. For example, in a **32-Bit datapath**, which is half the width of the **64-Bit SERDES datapath**, the `o_PCLK` frequency is twice that of the **TX_clock**. This is done to assure the synchronization between MAC and PHY layer.
 
 <img src="./images/PIPE_Interface.png" width=632 height=457 />
 
@@ -52,6 +52,8 @@ The simulation can be run using the [Gatemate open source toolchain](https://col
 
 ## Run Testbench
 Run `make testcase` to run the testbench (Note that the testbench currently only works for **64-Bit datapath**).
+
+The testbench also requires the simulation model of the SERDES, which currently can not be disclosed to the public.
 
 ## Testbench description
 The testbench begins by performing several key state transitions within the PIPE finite state machine (FSM). After initialization, it triggers the word alignment process and proceeds to transmit data. The transmission lines are modeled in the testbench using four registers `RX_SERIO_N`, `RX_SERIO_P`, `TX_SERIO_N`, and `TX_SERIO_P`, which also allow for manual fault injection to simulate various error detection processes.
