@@ -185,9 +185,10 @@ module ccfpga_pipe_logic #(
    // Parameters for PLL
 
    localparam       PLL_MUL                  =  (DATA_BYTES == 1) ? 32'd8 : (DATA_BYTES == 2) ? 32'd4 : (DATA_BYTES == 4) ? 32'd2 : 32'd1;
-   localparam       DIVIDER                  =  (DATA_BYTES == 8) ? 32'd2 : 32'd1;
+   //localparam       DIVIDER                  =  (DATA_BYTES == 8) ? 32'd2 : 32'd1;
+   localparam       DIVIDER                  =  32'd2;
    localparam       DATAPATH_WIDTH           =  32'd80;
-
+   
    parameter  [5:0] PLL_FCNTRL               = 58;                      // (Default = 58 = T:20d)
    parameter  [5:0] PLL_MAIN_DIVSEL          = {1'b0,2'b11,1'b0,2'b11}; // (Default = 27)
    parameter        N1                       = PLL_MAIN_DIVSEL[2] == 1'b0 ? 32'd1 : 32'd2;
