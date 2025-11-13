@@ -27,6 +27,35 @@ elif [[ $VAR -eq 3 ]]
  TESTCASE=RX_COUNT
 else
  echo -n -e "\nStarting LTSSM logic test \n\n"
+ echo -n -e "Available LTSSM Testcases:\n
+ [1] : Clock timeout test \n
+ [2] : Receiver timeout test \n
+ [3] : Power up test (from Detect to L0) \n
+ [4] : Scrambler test (not yet implemented) \n
+ [5] : Inversion test \n
+ Type Number to choose Testcase: "
+
+ read LTSSM_VAR
+ if [[ $LTSSM_VAR -eq 1 ]]
+  then
+  echo -n -e "\nStarting Clock timeout test \n\n"
+  LTSSM_TEST=CLK_TIMEOUT_TEST
+ elif [[ $LTSSM_VAR -eq 2 ]]
+  then
+  echo -n -e "\nStarting Receiver timeout test \n\n"
+  LTSSM_TEST=RX_TIMEOUT_TEST
+ elif [[ $LTSSM_VAR -eq 3 ]]
+  then
+  echo -n -e "\nStarting Power up test \n\n"
+  LTSSM_TEST=POWERUP_TEST
+ elif [[ $LTSSM_VAR -eq 4 ]]
+  then
+  echo -n -e "\nStarting Scrambler test \n\n"
+  LTSSM_TEST=SCRAMBLER_TEST
+ else
+  echo -n -e "\nStarting Inversion test \n\n"
+  LTSSM_TEST=INVERSION_TEST
+ fi
  TESTCASE=LTSSM
 fi
 
@@ -70,6 +99,29 @@ elif [[ $TESTCASE == "RX_COUNT" ]]
  ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/rx_count_tb.v
  ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
 else
- ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/LTSSM_logic_tb.v
- ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
+ if [[ $LTSSM_TEST == "CLK_TIMEOUT_TEST" ]]
+  then
+  ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/LTSSM_logic_tb.v \
+         -PLTSSM_logic_tb.CLK_TIMEOUT_TEST=1
+  ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
+ elif [[ $LTSSM_TEST == "RX_TIMEOUT_TEST" ]]
+  then
+  ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/LTSSM_logic_tb.v \
+         -PLTSSM_logic_tb.RX_TIMEOUT_TEST=1
+  ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
+ elif [[ $LTSSM_TEST == "POWERUP_TEST" ]]
+  then
+  ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/LTSSM_logic_tb.v \
+         -PLTSSM_logic_tb.POWERUP_TEST=1
+  ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
+ elif [[ $LTSSM_TEST == "SCRAMBLER_TEST" ]]
+  then
+  ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/LTSSM_logic_tb.v \
+         -PLTSSM_logic_tb.SCRAMBLER_TEST=1
+  ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
+ else
+  ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/LTSSM_logic_tb.v \
+         -PLTSSM_logic_tb.INVERSION_TEST=1
+  ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
+ fi
 fi
