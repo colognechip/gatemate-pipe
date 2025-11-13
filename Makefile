@@ -14,9 +14,13 @@ OFLFLAGS = --index-chain 0
 VLOG_SRC = $(shell find ./src/ -type f \( -iname \*.v -o -iname \*.sv \))
 VHDL_SRC = $(shell find ./src/ -type f \( -iname \*.vhd -o -iname \*.vhdl \))
 
-## testcases
+## PIPE testcases
 testcase: serdesflow_mod
 	source serdesflow_mod
+
+## MAC testcases
+mac_testcase: testbench_script
+	source testbench_script
 
 ## open source toolchain
 net/$(TOP)_synth.json: $(VLOG_SRC)
