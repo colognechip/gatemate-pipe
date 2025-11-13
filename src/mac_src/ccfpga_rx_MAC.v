@@ -456,7 +456,7 @@ module ccfpga_rx_MAC #(
 
     // Rx Timeout counting signals
     assign data_timeout = (data[127:48] == {ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1}) && (data[23:16] == PAD) && (data[15:8] == PAD); // TS1 with PAD-Lane and PAD-Link
-    assign inc_count_timeout = (COM_detected == 1'b0) && data_timeout;
+    assign inc_count_timeout = (COM_detected == 1'b1) && data_timeout;
     assign clear_count_timeout = (COM_detected == 1'b1) && !data_timeout && (rx_count_timeout != TIMEOUT_MAX_COUNT);
 
     // Detect special characters (STP, SDP or END) in all symbol positions

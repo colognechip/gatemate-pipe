@@ -114,7 +114,7 @@ module ccfpga_LTSSM_fsm #(
          end
          CONFIG_LINKWIDTH_ACCEPT_LANENUM : begin
             if ( lane_detected == 1'b1 )
-               s_next_state = CONFIG_LANENUM_ACCEPT;
+               s_next_state = CONFIG_LINKWIDTH_ACCEPT;
          end
          CONFIG_LINKWIDTH_ACCEPT : begin
             if ( s_rx_flag == 1'b1 )

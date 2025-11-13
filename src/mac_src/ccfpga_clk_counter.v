@@ -3,13 +3,13 @@
 // Flag output when the target count value is reached
 
 module ccfpga_clk_counter #(
-    parameter  BIT_WIDTH = 4        // Width of Count Register
+    parameter  BIT_WIDTH = 21        // Width of Count Register
    )
    (
-    input  wire       i_clk,
-    input  wire       i_reset,              // Asynchronous Reset
-    input  wire       max_count,            // Max Count
-    output reg        o_flag                // Output Flag when Count reaches max count
+    input  wire                 i_clk,
+    input  wire                 i_reset,              // Asynchronous Reset
+    input  wire [BIT_WIDTH-1:0] max_count,            // Max Count
+    output reg                  o_flag                // Output Flag when Count reaches max count
     );
 
 reg [BIT_WIDTH-1:0] s_count;

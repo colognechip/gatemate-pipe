@@ -75,7 +75,7 @@ module ccfpga_LTSSM_logic #(
    // Timeout
    wire s_clk_timeout_rst;    // Timeout reset
    wire s_OS_timeout_rst;     // Timeout reset
-   wire clk_max_count;        // Max count for timeout
+   wire [20:0] clk_max_count;  // Max count for timeout
    wire s_timeout;            // Timeout flag
    wire s_timeout_clk;        // Timeout due to clock
    wire s_timeout_OS;         // Timeout due to received OS
@@ -291,7 +291,7 @@ module ccfpga_LTSSM_logic #(
 
    // Clock count (Timeout)
    ccfpga_clk_counter # (
-      .BIT_WIDTH        ( 24 )
+      .BIT_WIDTH        ( 21                 )
    ) timeout_counter_inst (
       .i_clk            ( i_PCLK             ),
       .i_reset          ( s_clk_timeout_rst  ),     // Asynchronous Reset

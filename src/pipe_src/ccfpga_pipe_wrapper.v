@@ -105,13 +105,13 @@ module ccfpga_pipe_wrapper #(
    // SerDes Config Parameter
    // PLL Parameters. Clock with frequency of 62.5 MHz. Tx clock with the frequency of 31.25 MHz will be generated with a divider in PIPE Logic.
    // 32-Bit Datapath will use the 62.5 MHz clock directly, while 64-Bit Datapath will use the divided clock of 31.25 MHz.
-   parameter  [5:0] PLL_FCNTRL               = 6'h1A;                   // (Default = 58 = T:20d)
-   parameter  [5:0] PLL_MAIN_DIVSEL          = {1'b0,2'b11,1'b0,2'b11}; // (Default = 27)
-   parameter  [1:0] PLL_OUT_DIVSEL           = 2'b01;                   // (Default = 0 = T:1d)
-   // Lower frequency for Loopback test
    //parameter  [5:0] PLL_FCNTRL               = 6'h1A;                   // (Default = 58 = T:20d)
-   //parameter  [5:0] PLL_MAIN_DIVSEL          = {1'b0,2'b00,1'b0,2'b01}; // (Default = 27)
-   //parameter  [1:0] PLL_OUT_DIVSEL           = 2'b11;                   // (Default = 0 = T:1d)
+   //parameter  [5:0] PLL_MAIN_DIVSEL          = {1'b0,2'b11,1'b0,2'b11}; // (Default = 27)
+   //parameter  [1:0] PLL_OUT_DIVSEL           = 2'b01;                   // (Default = 0 = T:1d)
+   // Lower frequency for Loopback test
+   parameter  [5:0] PLL_FCNTRL               = 6'h1A;                   // (Default = 58 = T:20d)
+   parameter  [5:0] PLL_MAIN_DIVSEL          = {1'b0,2'b00,1'b0,2'b01}; // (Default = 27)
+   parameter  [1:0] PLL_OUT_DIVSEL           = 2'b11;                   // (Default = 0 = T:1d)
 
    parameter  [1:0] RX_DATAPATH_SEL          = 2'b11;              // (Default = 3)
    parameter  [1:0] TX_DATAPATH_SEL          = 2'b11;              // (Default = 3)
