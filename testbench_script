@@ -1,0 +1,75 @@
+#!/bin/bash
+
+# Default timescale is set to 1ns/100fs (common lowest precision)
+
+#Choose testcase
+
+echo -n -e "Available Testcases:\n
+[1] : Tx_count test \n
+[2] : Send_OS test \n
+[3] : Rx_count test \n
+[4] : LTSSM logic test \n
+Type Number to choose Testcase: "
+
+read VAR
+
+if [[ $VAR -eq 1 ]]
+ then
+ echo -n -e "\nStarting Tx_count test \n\n"
+ TESTCASE=TX_COUNT
+elif [[ $VAR -eq 2 ]]
+ then
+ echo -n -e "\nStarting Send_OS test \n\n"
+ TESTCASE=SEND_OS
+elif [[ $VAR -eq 3 ]]
+ then
+ echo -n -e "\nStarting Rx_count test \n\n"
+ TESTCASE=RX_COUNT
+else
+ echo -n -e "\nStarting LTSSM logic test \n\n"
+ TESTCASE=LTSSM
+fi
+
+#TESTCASE=SERDES # Only SerDes
+#TESTCASE=PIPE # PIPE Interface
+
+# If TESTCASE=PIPE, also choose Bitwidth of PIPE Iterface
+
+#BITWIDTH=8
+#BITWIDTH=2
+
+#sim file path
+SIM_FILE_PATH=./sim
+
+#source file path
+SRC_FILE_PATH=./src
+
+#Simulation dump file
+VCD=./sim
+
+#Verilog source
+VLOG_SRC=$(find ${SRC_FILE_PATH} -type f \( -iname \*.v -o -iname \*.sv \))
+
+#Simulation environment
+IVL=iverilog
+VVP=vvp
+
+mkdir -p sim/
+rm -f ${VCD}/vlog_sim.${VVP}
+
+if [[ $TESTCASE == "TX_COUNT" ]]
+ then
+ ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/tx_count_tb.v
+ ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
+elif [[ $TESTCASE == "SEND_OS" ]]
+ then
+ ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/send_OS_tb.v
+ ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
+elif [[ $TESTCASE == "RX_COUNT" ]]
+ then
+ ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/rx_count_tb.v
+ ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
+else
+ ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/LTSSM_logic_tb.v
+ ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
+fi
