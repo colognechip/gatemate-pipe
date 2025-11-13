@@ -8,7 +8,7 @@ module send_OS_tb();
     // Inputs
     reg clk;
     reg send_OS_trigger;
-    reg reset_n;
+    reg reset;
     reg [7:0] received_Link;
     reg [7:0] received_Lane;
     reg [7:0] received_Ctrl;
@@ -16,15 +16,16 @@ module send_OS_tb();
     wire [63:0] txdata;
     wire [7:0] txdatak;
     wire OS_sent;
+    wire sending_OS;
 
     // Instantiate the Unit Under Test (UUT)
-    send_OS #(
+    ccfpga_send_OS #(
         .PATTERN_WIDTH(128),
         .DATA_BYTES(8)
     ) uut (
         .clk(clk),
         .send_OS_trigger(send_OS_trigger),
-        .reset_n(reset_n),
+        .reset(reset),
         .received_Link(received_Link),
         .received_Lane(received_Lane),
         .received_Ctrl(received_Ctrl),
@@ -32,7 +33,8 @@ module send_OS_tb();
 
         .txdata(txdata),
         .txdatak(txdatak),
-        .OS_sent(OS_sent)
+        .OS_sent(OS_sent),
+        .sending_OS(sending_OS)
    );
 
     // Clock generation
@@ -45,7 +47,7 @@ module send_OS_tb();
     initial begin
         // Initialize Inputs
         send_OS_trigger = 0;
-        reset_n = 0;
+        reset = 1;
         received_Link = 8'hF7;
         received_Lane = 8'hF7;
         received_Ctrl = 8'h00;
@@ -53,7 +55,7 @@ module send_OS_tb();
 
         // Wait for global reset to finish
         #(CLK_PERIOD * 10);
-        reset_n = 1;
+        reset = 0;
 
         // Add stimulus
         $display("---------------------------------------------");

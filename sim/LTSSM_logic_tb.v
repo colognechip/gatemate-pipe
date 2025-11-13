@@ -15,7 +15,7 @@ module LTSSM_logic_tb();
     parameter RX_TIMEOUT_TEST  = 1'b0;
     parameter POWERUP_TEST     = 1'b0;
     parameter SCRAMBLER_TEST   = 1'b0;
-    parameter INVERSION_TEST   = 1'b1;
+    parameter INVERSION_TEST   = 1'b0;
 
     // Inputs
     reg         clk;

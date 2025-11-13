@@ -11,6 +11,9 @@ module rx_MAC_tb();
     // Inputs
     reg clk;
     reg reset;
+    reg OS_reset_flag;
+    reg IDLE_reset_flag;
+    reg timeout_reset_flag;
     reg [DATA_WIDTH-1:0] rx_data;
     reg [7:0] expected_Link;
     reg [7:0] expected_Lane;
@@ -18,7 +21,14 @@ module rx_MAC_tb();
     reg [COUNT_WIDTH-1:0] max_count;
     reg TS1_pattern_en;
     reg TS2_pattern_en;
+    reg L0_enabled;
 
+    wire timeout_flag;
+    wire inversion_detected;
+    wire detected_Ctrl;
+    wire IDLE_detected;
+    wire IDLE_count_maxed;
+    wire [DATA_WIDTH-1:0] rx_data_DLL;
     wire OS_detected;
     wire OS_valid;
     wire count_maxed;
@@ -26,14 +36,19 @@ module rx_MAC_tb();
     wire [7:0] detected_Lane;
 
     // Instantiate the Unit Under Test (UUT)
-    rx_count #(
+    ccfpga_rx_MAC #(
         .COUNT_WIDTH(COUNT_WIDTH),
         .PATTERN_WIDTH(128),
-        .DATA_WIDTH(DATA_WIDTH)
+        .DATA_BYTES(DATA_BYTES)
     ) uut (
         .clk(clk),
         .reset(reset),
+        .OS_reset_flag(OS_reset_flag),
+        .IDLE_reset_flag(IDLE_reset_flag),
+        .timeout_reset_flag(timeout_reset_flag),
+
         .rx_data(rx_data),
+
         .expected_Link(expected_Link),
         .expected_Lane(expected_Lane),
         .expected_Ctrl(expected_Ctrl),
@@ -41,11 +56,22 @@ module rx_MAC_tb();
         .TS1_pattern_en(TS1_pattern_en),
         .TS2_pattern_en(TS2_pattern_en),
 
+        .L0_enabled(L0_enabled),
+
+        .timeout_flag(timeout_flag),
+
         .OS_valid(OS_valid),
         .OS_detected(OS_detected),
-        .count_maxed(count_maxed),
+        .OS_count_maxed(count_maxed),
+        .inversion_detected(inversion_detected),
         .detected_Link(detected_Link),
-        .detected_Lane(detected_Lane)
+        .detected_Lane(detected_Lane),
+        .detected_Ctrl(detected_Ctrl),
+
+        .IDLE_detected(IDLE_detected),
+        .IDLE_count_maxed(IDLE_count_maxed),
+
+        .rx_data_DLL(rx_data_DLL)
     );
 
     // Clock generation
@@ -64,6 +90,9 @@ module rx_MAC_tb();
         initial begin
             // Initialize Inputs
             reset = 1;
+            OS_reset_flag = 1;
+            IDLE_reset_flag = 1;
+            timeout_reset_flag = 1;
             rx_data = 64'h0000000000000000;
             expected_Link = 8'h01;
             expected_Lane = 8'h02;
@@ -71,10 +100,12 @@ module rx_MAC_tb();
             max_count = 4'd4;
             TS1_pattern_en = 1;
             TS2_pattern_en = 0;
+            L0_enabled = 0;
 
             // Wait for global reset to finish
             #(CLK_PERIOD * 10);
             reset = 0;
+            OS_reset_flag = 0;
 
             // Add stimulus
             $display("---------------------------------------------");
@@ -200,7 +231,7 @@ module rx_MAC_tb();
         initial begin
             // Initialize Inputs
             reset = 1;
-            rx_data = 32'h0000000000000000;
+            rx_data = 32'h00000000;
             expected_Link = 8'h01;
             expected_Lane = 8'h02;
             expected_Ctrl = 8'h00;

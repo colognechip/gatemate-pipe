@@ -7,7 +7,7 @@
 echo -n -e "Available Testcases:\n
 [1] : Tx_count test \n
 [2] : Send_OS test \n
-[3] : Rx_count test \n
+[3] : Rx_MAC test \n
 [4] : LTSSM logic test \n
 Type Number to choose Testcase: "
 
@@ -96,7 +96,7 @@ elif [[ $TESTCASE == "SEND_OS" ]]
  ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
 elif [[ $TESTCASE == "RX_COUNT" ]]
  then
- ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/rx_count_tb.v
+ ${IVL} -g2012 -gspecify -Ttyp -o ${VCD}/vlog_sim.${VVP} ${VLOG_SRC} ${SIM_FILE_PATH}/rx_MAC_tb.v
  ${VVP} -N ${VCD}/vlog_sim.${VVP} -fst
 else
  if [[ $LTSSM_TEST == "CLK_TIMEOUT_TEST" ]]

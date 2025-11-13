@@ -9,20 +9,29 @@ module tx_count_tb();
     reg         clk;
     reg         reset;
     reg         OS_sent;
-    reg         OS_detected;
+    reg         OS_valid;
     reg [3:0]   max_count;
 
+    wire        count_flag;
+
     // Instantiate the Unit Under Test (UUT)
-    tx_count #(
+    ccfpga_tx_count #(
         .COUNT_WIDTH(4)
     ) uut (
         .clk(clk),
-        .reset(reset),
-        .OS_sent(OS_sent),
-        .OS_detected(OS_detected),
-        .max_count(max_count),
+        .OS_reset_flag(reset),
+        .IDLE_reset_flag(1'b1),
+        .polling_active_reset_flag(1'b1),
 
-        .count_maxed(count_flag)
+        .OS_sent(OS_sent),
+        .OS_valid(OS_valid),
+        .IDLE_sent(1'b0),
+        .IDLE_detected(1'b0),
+        .OS_max_count(max_count),
+
+        .OS_count_maxed(count_flag),
+        .IDLE_count_maxed(),
+        .polling_active_count_maxed()
     );
 
     // Clock generation
@@ -35,7 +44,7 @@ module tx_count_tb();
     initial begin
         // Initialize Inputs
         reset = 1;
-        OS_detected = 0;
+        OS_valid = 0;
         OS_sent = 0;
         max_count = 4'd4;
 
@@ -48,12 +57,12 @@ module tx_count_tb();
         $display("  Reset Deasserted - Start Test Sequence     ");
         $display("---------------------------------------------");
         #(CLK_PERIOD * 10);
-        OS_detected = 1;
-        $display("OS_detected asserted");
+        OS_valid = 1;
+        $display("OS_valid asserted");
         $display("Max_count set to: %d", max_count);
         #(CLK_PERIOD);
-        OS_detected = 0;
-        $display("OS_detected deasserted");
+        OS_valid = 0;
+        $display("OS_valid deasserted");
         #(CLK_PERIOD * 10);
         OS_sent = 1;
         $display("OS_sent asserted, count_flag: %b", count_flag);
@@ -68,7 +77,7 @@ module tx_count_tb();
         $display("OS_sent deasserted, count_flag: %b", count_flag);
         #(CLK_PERIOD*2);
         OS_sent = 1;
-        OS_detected = 1; // Should not affect counting
+        OS_valid = 1; // Should not affect counting
         $display("OS_sent asserted, count_flag: %b", count_flag);
         #(CLK_PERIOD);
         OS_sent = 0;
@@ -105,11 +114,11 @@ module tx_count_tb();
         $display("Max_count set to: %d", max_count);
         $display("Reset deasserted, count_flag: %b", count_flag);
         #(CLK_PERIOD * 10 - 2);
-        OS_detected = 1;
-        $display("OS_detected, count_flag: %b", count_flag);
+        OS_valid = 1;
+        $display("OS_valid asserted, count_flag: %b", count_flag);
         #(CLK_PERIOD);
-        OS_detected = 0;
-        $display("OS_detected deasserted, count_flag: %b", count_flag);
+        OS_valid = 0;
+        $display("OS_valid deasserted, count_flag: %b", count_flag);
         #(CLK_PERIOD * 10);
         OS_sent = 1;
         $display("OS_sent asserted, count_flag: %b", count_flag);
