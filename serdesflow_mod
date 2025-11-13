@@ -39,7 +39,7 @@ fi
 SERDES_FILE_PATH=./sim
 
 #pipe file path
-PIPE_FILE_PATH=./src
+PIPE_FILE_PATH=./src/pipe_src
 
 #serdes source path
 SERDES_SRC_PATH=./serdes_src

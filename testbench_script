@@ -42,7 +42,7 @@ fi
 SIM_FILE_PATH=./sim
 
 #source file path
-SRC_FILE_PATH=./src
+SRC_FILE_PATH=./src/mac_src
 
 #Simulation dump file
 VCD=./sim
