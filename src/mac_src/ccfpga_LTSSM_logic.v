@@ -17,7 +17,6 @@ module ccfpga_LTSSM_logic #(
    input wire   [DATA_WIDTH-1:0] i_TxData,       // Tx Data
    input wire   [DATA_BYTES-1:0] i_TxDataK,      // Tx K Data
 
-   output wire                   o_Reset_n,      // Asyn. Reset
    output wire             [1:0] o_PowerDown,    // Power states
    output wire                   o_TxDetectRx,   // Receiver Detection (P1)/Loopback (P0)
    output wire                   o_TxElecIdle,   // Electrical Idle
