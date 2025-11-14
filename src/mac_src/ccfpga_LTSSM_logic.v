@@ -1,3 +1,5 @@
+`timescale 1ns/100fs
+
 module ccfpga_LTSSM_logic #(
    parameter DATA_BYTES = 8,
    parameter PATTERN_WIDTH = 128,

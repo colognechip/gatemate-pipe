@@ -29,7 +29,6 @@ module LTSSM_logic_tb();
     reg  [DATA_WIDTH-1:0] i_TxData;         // Tx Data
     reg  [DATA_BYTES-1:0] i_TxDataK;        // Tx K Data
 
-    wire o_Reset_n;                       // Asyn. Reset
     wire [1:0] o_PowerDown;               // Power states
     wire o_TxDetectRx;                    // Receiver Detection (P1)/Loopback (P0)
     wire o_TxElecIdle;                    // Electrical Idle
@@ -58,7 +57,6 @@ module LTSSM_logic_tb();
         .i_TxData(i_TxData),             // Tx Data
         .i_TxDataK(i_TxDataK),           // Tx K Data
 
-        .o_Reset_n(o_Reset_n),           // Asyn. Reset
         .o_PowerDown(o_PowerDown),       // Power states
         .o_TxDetectRx(o_TxDetectRx),     // Receiver Detection (P1)/Loopback (P0)
         .o_TxElecIdle(o_TxElecIdle),     // Electrical Idle
