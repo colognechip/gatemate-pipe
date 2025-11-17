@@ -119,9 +119,9 @@ module ccfpga_rx_MAC #(
 
     // Shift registers to store received data for Ordered Set assembly
     reg [DATA_WIDTH - 1 : 0] rx_data_shift [NUMBER_OF_STEPS : 0];
+    integer i;
 
     always @ (posedge clk) begin
-        integer i;
         rx_data_shift[0] <= rx_data;
         for ( i = 1; i < NUMBER_OF_STEPS + 1; i = i + 1 ) begin
             rx_data_shift[i] <= rx_data_shift[i - 1];
@@ -461,10 +461,10 @@ module ccfpga_rx_MAC #(
 
     // Detect special characters (STP, SDP or END) in all symbol positions
     generate
-        genvar i;
-        for (i = 0; i < DATA_BYTES; i = i + 1) begin
-            assign char_is_K[i] = (rx_data_DLL[8*i +: 8] == STP) || (rx_data_DLL[8*i +: 8] == SDP);
-            assign char_is_END[i] = (rx_data_DLL[8*i +: 8] == _END);
+        genvar j;
+        for (j = 0; j < DATA_BYTES; j = j + 1) begin
+            assign char_is_K[j] = (rx_data_DLL[8*j +: 8] == STP) || (rx_data_DLL[8*j +: 8] == SDP);
+            assign char_is_END[j] = (rx_data_DLL[8*j +: 8] == _END);
         end
     endgenerate
 

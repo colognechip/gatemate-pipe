@@ -20,10 +20,12 @@ module ccfpga_scrambler #(
 
     localparam LFSR_WIDTH = 16;
 
-    reg [DATA_WIDTH - 1 : 0] scrambled_data_reg, scrambled_data_next;
+    reg [DATA_WIDTH - 1 : 0] scrambled_data_reg;
     reg [DATA_BYTES - 1 : 0] data_in_k_reg;
-    reg               [15:0] first_lfsr, first_lfsr_next;
+    reg               [15:0] first_lfsr;
 
+    wire            [DATA_WIDTH - 1 : 0] scrambled_data_next;
+    wire                          [15:0] first_lfsr_next;
     wire [LFSR_WIDTH*DATA_BYTES - 1 : 0] lfsr_vector;
     wire [LFSR_WIDTH*DATA_BYTES - 1 : 0] lfsr_out;
     wire            [DATA_WIDTH - 1 : 0] lfsr_value;

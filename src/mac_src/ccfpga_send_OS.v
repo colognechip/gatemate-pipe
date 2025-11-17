@@ -31,6 +31,8 @@ module ccfpga_send_OS #(
 
    wire [PATTERN_WIDTH - 1 : 0] pattern;
    wire [PATTERN_BYTES - 1 : 0] pattern_k;
+   wire                         PAD_link;
+   wire                         PAD_lane;
 
    reg [$clog2(NUMBER_OF_STEPS) : 0] step;
 
@@ -62,8 +64,10 @@ module ccfpga_send_OS #(
       end
    end
 
-   assign pattern = OS_type == 1'b0 ? {ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, received_Ctrl, 8'h02, 8'h00, received_Lane, received_Link, COM} :
-                                      {ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, received_Ctrl, 8'h02, 8'h00, received_Lane, received_Link, COM};
-   assign pattern_k = {{15'b0}, 1'b1};
+   assign pattern = OS_type == 1'b0 ? {ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, received_Ctrl, 8'h02, 8'h04, received_Lane, received_Link, COM} :
+                                      {ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, received_Ctrl, 8'h02, 8'h04, received_Lane, received_Link, COM};
+   assign PAD_link = received_Link == PAD;
+   assign PAD_lane = received_Lane == PAD;
+   assign pattern_k = {{13'b0}, PAD_lane, PAD_link, 1'b1};
 
 endmodule

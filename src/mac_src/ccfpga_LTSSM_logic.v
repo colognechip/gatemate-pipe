@@ -136,7 +136,7 @@ module ccfpga_LTSSM_logic #(
    assign o_LinkUp = fsm_state == 5'b01010 ? 1'b1 : fsm_state == 5'b01001 ? 1'b1 : 1'b0; // Link Up for L0 or CONFIG_IDLE
    assign s_rx_flag = ((s_rx_flag_OS && (fsm_state != 5'b01001)) || (s_rx_flag_IDLE && (fsm_state == 5'b01001)));
    assign s_tx_flag = (s_tx_flag_OS && (fsm_state != 5'b01001)) || (s_tx_flag_IDLE && (fsm_state == 5'b01001));
-   assign s_rx_rst  = ((fsm_state == 5'b10010) ? s_link_detected_rst : (fsm_state == 5'b10011) ? s_lane_detected_rst : s_rx_flag_rst) && i_RxValid; // TODO: i_RxValid = 1'b1 the whole time??
+   assign s_rx_rst  = ((fsm_state == 5'b10010) ? s_link_detected_rst : (fsm_state == 5'b10011) ? s_lane_detected_rst : s_rx_flag_rst) || ~i_RxValid;
 
    // Rx
    assign L0_enabled   = fsm_state == 5'b01010 ? 1'b1 : 1'b0;
@@ -149,7 +149,9 @@ module ccfpga_LTSSM_logic #(
                          fsm_state == 5'b00110 ? 4'b0010 :
                          fsm_state == 5'b00111 ? 4'b0010 :
                          fsm_state == 5'b01000 ? 4'b1000 :
-                         fsm_state == 5'b01001 ? 4'b1000 : 4'b1111;
+                         fsm_state == 5'b01001 ? 4'b1000 :
+                         fsm_state == 5'b10010 ? 4'b0001 :
+                         fsm_state == 5'b10011 ? 4'b0001 : 4'b1111;
 
    assign TS1_pattern_en = fsm_state == 5'b00010 ? 1'b1 :
                            fsm_state == 5'b00011 ? 1'b0 :
@@ -462,7 +464,7 @@ module ccfpga_LTSSM_logic #(
    .data_in_TS    ( rx_char_is_training_sequence ), // TODO: how to know if it is TS?
 
    .data_out      ( unscrambled_data             ),
-   .data_out_k    ( unscrambled_data_k            )
+   .data_out_k    ( unscrambled_data_k           )
    );
 
    // TODO: Question: if we sending nothing, maybe waiting for data from upper layer
