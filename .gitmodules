@@ -1,0 +1,6 @@
+[submodule "pcievhost"]
+	path = pcievhost
+	url = https://github.com/HaiLuong01/pcievhost.git
+[submodule "vproc"]
+	path = vproc
+	url = https://github.com/wyvernSemi/vproc
