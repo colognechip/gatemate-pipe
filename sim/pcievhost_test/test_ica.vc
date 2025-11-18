@@ -1,0 +1,19 @@
+
+// Top level test header. Must define `fatal as a minimum, for use by sub-functions
+test_defs.v
+
+// Headers with definitions
+../../pcievhost/verilog/headers/timescale.v
+../../pcievhost/verilog/headers/pciexpress_header.v
+../../pcievhost/verilog/headers/pcie_vhost_map.v
+
+// PCIe Host top level
+../../pcievhost/verilog/pcieVHost/pcieVHostPipex1.v
+../../pcievhost/verilog/pcieVHost/pcieVHost.v
+
+// VProc
+../../vproc/extradefs.v
+../../vproc/f_VProc.v
+
+// Top level test module
+test.v
