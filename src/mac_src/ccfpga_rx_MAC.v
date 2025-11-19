@@ -103,11 +103,11 @@ module ccfpga_rx_MAC #(
     wire [PATTERN_WIDTH - 1 : 0] data_OS;
     wire [PATTERN_WIDTH - 1 : 0] data_valid;
 
-    reg [COUNT_WIDTH - 1 : 0] rx_count_OS;
-    reg [IDL_MAX_COUNT - 1 : 0] rx_count_IDL;
-    reg [1:0] rx_count_timeout;
+    reg   [COUNT_WIDTH - 1 : 0] rx_count_OS;
+    reg                   [3:0] rx_count_IDL;
+    reg                   [1:0] rx_count_timeout;
     reg [PATTERN_WIDTH - 1 : 0] data;
-    reg COM_detected;
+    reg                         COM_detected;
 
     // Processing received data
     wire [DATA_BYTES - 1 : 0] char_is_K;
@@ -148,10 +148,10 @@ module ccfpga_rx_MAC #(
     // IDLE counting/ count_maxed is hold until reset or clear_count
     always @ (posedge clk or posedge IDLE_reset_flag) begin
         if ( IDLE_reset_flag ) begin
-            rx_count_IDL <= {IDL_MAX_COUNT{1'b0}};
+            rx_count_IDL <= 4'b0;
             IDLE_count_maxed <= 1'b0;
         end else if ( clear_count_IDL ) begin
-            rx_count_IDL <= {IDL_MAX_COUNT{1'b0}};
+            rx_count_IDL <= 4'b0;
             IDLE_count_maxed <= 1'b0;
         end else if ( inc_count_IDL ) begin
             if ( rx_count_IDL == IDL_MAX_COUNT ) begin
@@ -451,7 +451,8 @@ module ccfpga_rx_MAC #(
     assign rx_valid  = (TS1_pattern_en && (data_valid == TS1_valid)) || (TS2_pattern_en && (data_valid == TS2_valid));
 
     // IDLE counting signals
-    assign inc_count_IDL = ( rx_data_shift[NUMBER_OF_STEPS] == { DATA_WIDTH{1'b0} } );
+    //assign inc_count_IDL = ( rx_data_shift[NUMBER_OF_STEPS] == { DATA_WIDTH{1'b0} } );
+    assign inc_count_IDL = COM_detected == 1'b0;
     assign clear_count_IDL = !inc_count_IDL;
 
     // Rx Timeout counting signals

@@ -22,7 +22,7 @@ module ccfpga_send_OS #(
    output reg sending_OS
    );
 
-   localparam NUMBER_OF_STEPS = PATTERN_WIDTH / DATA_WIDTH;
+   localparam NUMBER_OF_STEPS = PATTERN_WIDTH / DATA_WIDTH - 1;
    localparam COM  = 8'hBC; // K28.5
    localparam PAD  = 8'hF7; // K23.7
 
@@ -43,18 +43,20 @@ module ccfpga_send_OS #(
          OS_sent <= 1'b0;
          step    <= 0;
          sending_OS <= 1'b0;
-      end else if ( send_OS_trigger && (step != NUMBER_OF_STEPS) ) begin
-         txdata  <= pattern[DATA_WIDTH * step +: DATA_WIDTH];
-         txdatak <= pattern_k[DATA_BYTES * step +: DATA_BYTES];
-         OS_sent <= 1'b0;
-         sending_OS <= 1'b1;
-         step    <= step + 1;
-      end else if ( step == NUMBER_OF_STEPS ) begin
-         txdata  <= {DATA_WIDTH{1'b0}};
-         txdatak <= {DATA_BYTES{1'b0}};
-         OS_sent <= 1'b1;
-         sending_OS <= 1'b0;
-         step    <= 0;
+      end else if (send_OS_trigger == 1'b1) begin
+         if ( step != NUMBER_OF_STEPS ) begin
+            txdata  <= pattern[DATA_WIDTH * step +: DATA_WIDTH];
+            txdatak <= pattern_k[DATA_BYTES * step +: DATA_BYTES];
+            OS_sent <= 1'b0;
+            sending_OS <= 1'b1;
+            step    <= step + 1;
+         end else if ( step == NUMBER_OF_STEPS ) begin
+            txdata  <= pattern[DATA_WIDTH * step +: DATA_WIDTH];
+            txdatak <= pattern_k[DATA_BYTES * step +: DATA_BYTES];
+            OS_sent <= 1'b1;
+            sending_OS <= 1'b1;
+            step    <= 0;
+         end
       end else begin
          txdata  <= {DATA_WIDTH{1'b0}};
          txdatak <= {DATA_BYTES{1'b0}};
@@ -64,8 +66,8 @@ module ccfpga_send_OS #(
       end
    end
 
-   assign pattern = OS_type == 1'b0 ? {ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, received_Ctrl, 8'h02, 8'h04, received_Lane, received_Link, COM} :
-                                      {ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, received_Ctrl, 8'h02, 8'h04, received_Lane, received_Link, COM};
+   assign pattern = OS_type == 1'b0 ? {{10{ID1}}, received_Ctrl, 8'h02, 8'h04, received_Lane, received_Link, COM} :
+                                      {{10{ID2}}, received_Ctrl, 8'h02, 8'h04, received_Lane, received_Link, COM};
    assign PAD_link = received_Link == PAD;
    assign PAD_lane = received_Lane == PAD;
    assign pattern_k = {{13'b0}, PAD_lane, PAD_link, 1'b1};
