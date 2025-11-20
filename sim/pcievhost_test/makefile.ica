@@ -29,15 +29,12 @@ USERCFLAGS     =
 # Update if relocated.
 VPROC_TOP      = ../../vproc
 
-# Define the github repository URL for the VProc virtual processor
-VPROC_REPO     = https://github.com/wyvernSemi/vproc.git
-
 #
 # PCIE VHost test defintions
 #
 PCIE_CLIB_DIR  = ../../pcievhost/lib
 SRCDIR         = ../../pcievhost/src
-USRCDIR        = ../../pcievhost/verilog/testpipex1/usercode
+USRCDIR        = usercode
 PLI_SO         = VProc.so
 VPROCLIB       = libvproc.a
 PCIELIB        = libpcievhost.a
@@ -46,7 +43,7 @@ SIMEXE         = sim
 #
 # Source code
 #
-USER_C         = VUserMain0.cpp VUserMain1.c
+USER_C         = VUserMain0.cpp
 PCIE_MAP_C     = pcie_vhost_map.h
 
 #
@@ -145,18 +142,12 @@ $(VPROCLIB): $(VPROC_TOP)
              USER_C="$(USER_C)"                             \
              $(CURDIR)/$(VPROCLIB)             
 
-#
-# Checkout VProc from github if it doesn't exist at the specified location
-#
-$(VPROC_TOP):
-	git clone $(VPROC_REPO) $(VPROC_TOP) --recursive
-
 
 #
 # Build the verilog
 #
 # Verilog source
-VLOG_SRC = $(shell find ~/gatemate-pipe/src/mac_src/ -type f \( -iname \*.v -o -iname \*.sv \))
+VLOG_SRC = $(shell find ../../src/mac_src/ -type f \( -iname \*.v -o -iname \*.sv \))
 
 verilog: $(PLI_SO) $(VLOGFILES) $(PCIE_MAP_V)
 	@iverilog -o $(SIMEXE) $(VLOGFLAGS) $(VLOG_SRC) -s test
@@ -207,6 +198,6 @@ help:
 clean: $(VPROC_TOP)
 	@$(MAKE) --no-print-directory -C $(PCIE_CLIB_DIR)  clean
 	@$(MAKE) --no-print-directory -f makefile.ica -C $(VPROC_TOP)/test TESTDIR=$(CURDIR) clean
-	@rm -rf $(PLI_SO) $(PCIE_MAP_V) $(SIMEXE) obj
+	@rm -rf $(PLI_SO) $(PCIE_MAP_V) $(SIMEXE) obj waves.vcd
 
 
