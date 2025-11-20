@@ -13,6 +13,7 @@ module ccfpga_tx_count #(
 
     input wire OS_sent,
     input wire OS_valid,
+    input wire OS_rec_cfg_detected,
     input wire IDLE_sent,
     input wire IDLE_detected,
     input wire [COUNT_WIDTH - 1 : 0] OS_max_count,
@@ -78,7 +79,7 @@ module ccfpga_tx_count #(
     always @ (posedge clk or posedge OS_reset_flag) begin
         if ( OS_reset_flag ) begin
             OS_count_enabled <= 1'b0;
-        end else if ( OS_valid ) begin
+        end else if ( OS_valid || OS_rec_cfg_detected ) begin
             OS_count_enabled <= 1'b1;
         end
     end

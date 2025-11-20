@@ -16,6 +16,8 @@ module ccfpga_rx_MAC #(
     input wire OS_reset_flag,
     input wire IDLE_reset_flag,
     input wire timeout_reset_flag,
+    input wire rec_cfg_reset_flag,
+    input wire rec_idle_reset_flag,
 
     input wire [DATA_WIDTH - 1 : 0] rx_data,
 
@@ -44,6 +46,10 @@ module ccfpga_rx_MAC #(
     output reg IDLE_detected,
     output reg IDLE_count_maxed,
 
+    output reg rec_cfg_count_maxed,
+    output reg OS_rec_cfg_detected,
+    output reg rec_idle_count_maxed,
+
     output reg [DATA_WIDTH - 1 : 0] rx_data_DLL
     //output reg [DATA_BYTES - 1 : 0] rx_data_k_DLL
     );
@@ -70,6 +76,8 @@ module ccfpga_rx_MAC #(
 
     localparam IDL_MAX_COUNT                 = 8;
     localparam TIMEOUT_MAX_COUNT             = 2;
+    localparam REC_CFG_MAX_COUNT             = 8;
+    localparam REC_IDLE_MAX_COUNT            = 2;
     localparam SYMBOL_WIDTH                  = 8;
     localparam NUMBER_OF_SYMBOL_PER_PATTERN  = PATTERN_WIDTH / SYMBOL_WIDTH;
     localparam NUMBER_OF_SYMBOL_PER_DATA     = DATA_WIDTH / SYMBOL_WIDTH;
@@ -85,11 +93,17 @@ module ccfpga_rx_MAC #(
     wire clear_count_IDL;       // Clear count when an incorrect data is received
     wire inc_count_timeout;     // Increment timeout counter
     wire clear_count_timeout;   // Clear timeout counter
+    wire inc_count_rec_cfg;     // Increment recovery config counter
+    wire clear_count_rec_cfg;   // Clear recovery config counter
+    wire inc_count_rec_idle;    // Increment recovery idle counter
+    wire clear_count_rec_idle;  // Clear recovery idle counter
 
     // Processing received OS
     wire rx_valid;
     wire rx_OS;
     wire rx_OS_inv;
+    wire rx_rec_cfg;
+    wire rx_rec_idl;
     wire [PATTERN_WIDTH - 1 : 0] TS1_pattern;
     wire [PATTERN_WIDTH - 1 : 0] TS2_pattern;
     wire [PATTERN_WIDTH - 1 : 0] TS1_inv;
@@ -106,6 +120,8 @@ module ccfpga_rx_MAC #(
     reg   [COUNT_WIDTH - 1 : 0] rx_count_OS;
     reg                   [3:0] rx_count_IDL;
     reg                   [1:0] rx_count_timeout;
+    reg                   [3:0] rx_count_rec_cfg;
+    reg                   [1:0] rx_count_rec_idle;
     reg [PATTERN_WIDTH - 1 : 0] data;
     reg                         COM_detected;
 
@@ -190,6 +206,40 @@ module ccfpga_rx_MAC #(
                 rx_count_timeout <= rx_count_timeout + 1'b1;
                 timeout_flag <= 1'b0;
             end
+        end
+    end
+
+    // TS1 with non-matched Link/Lane in Recovery.RcvrCfg counting/ count_maxed is hold until reset or clear_count
+    always @ (posedge clk or posedge rec_cfg_reset_flag) begin
+        if ( rec_cfg_reset_flag ) begin
+            rx_count_rec_cfg    <= 4'b0;
+            rec_cfg_count_maxed <= 1'b0;
+        end else if ( clear_count_rec_cfg ) begin
+            rx_count_rec_cfg    <= 4'b0;
+            rec_cfg_count_maxed <= 1'b0;
+        end else if ( rx_count_rec_cfg == REC_CFG_MAX_COUNT ) begin
+            rx_count_rec_cfg    <= rx_count_rec_cfg;
+            rec_cfg_count_maxed <= 1'b1;
+        end else if ( inc_count_rec_cfg ) begin
+            rx_count_rec_cfg    <= rx_count_rec_cfg + 1'b1;
+            rec_cfg_count_maxed <= 1'b0;
+        end
+    end
+
+    // TS1 with PAD-Lane in Recovery.Idle counting/ count_maxed is hold until reset or clear_count
+    always @ (posedge clk or posedge rec_idle_reset_flag) begin
+        if ( rec_idle_reset_flag ) begin
+            rx_count_rec_idle     <= 2'b0;
+            rec_idle_count_maxed  <= 1'b0;
+        end else if ( clear_count_rec_idle ) begin
+            rx_count_rec_idle     <= 2'b0;
+            rec_idle_count_maxed  <= 1'b0;
+        end else if ( rx_count_rec_idle == REC_IDLE_MAX_COUNT ) begin
+            rx_count_rec_idle     <= rx_count_rec_idle;
+            rec_idle_count_maxed  <= 1'b1;
+        end else if ( inc_count_rec_idle ) begin
+            rx_count_rec_idle     <= rx_count_rec_idle + 1'b1;
+            rec_idle_count_maxed  <= 1'b0;
         end
     end
 
@@ -394,6 +444,20 @@ module ccfpga_rx_MAC #(
         end
     end
 
+    // Ordered Set received with non-matched Link/Lane in Recovery.RcvrCfg
+    always @ (posedge clk or posedge rec_cfg_reset_flag) begin
+        if ( rec_cfg_reset_flag ) begin
+            OS_rec_cfg_detected <= 1'b0;
+        end
+        else begin
+            if ( (COM_detected == 1'b1) && rx_rec_cfg ) begin
+                OS_rec_cfg_detected <= 1'b1;
+            end else begin
+                OS_rec_cfg_detected <= 1'b0;
+            end
+        end
+    end
+
     // Ordered Set received detection
     // OS_detected = 1 for one clock cycle when an Ordered Set received
     always @ (posedge clk or posedge OS_reset_flag) begin
@@ -446,214 +510,40 @@ module ccfpga_rx_MAC #(
     assign clear_count_OS = (COM_detected == 1'b1) && !rx_valid && (rx_count_OS != max_count);
 
     // TS position shifted according to the COM position in the received data
-    assign rx_OS     = (TS1_pattern_en && (data_OS == TS1_OS))       || (TS2_pattern_en && (data_OS == TS2_OS));
-    assign rx_OS_inv = (TS1_pattern_en && (data_OS == TS1_OS_inv))   || (TS2_pattern_en && (data_OS == TS2_OS_inv));
-    assign rx_valid  = (TS1_pattern_en && (data_valid == TS1_valid)) || (TS2_pattern_en && (data_valid == TS2_valid));
+    assign rx_OS      = (TS1_pattern_en && (data_OS == TS1_OS))       || (TS2_pattern_en && (data_OS == TS2_OS));
+    assign rx_OS_inv  = (TS1_pattern_en && (data_OS == TS1_OS_inv))   || (TS2_pattern_en && (data_OS == TS2_OS_inv));
+    assign rx_valid   = (TS1_pattern_en && (data_valid == TS1_valid)) || (TS2_pattern_en && (data_valid == TS2_valid));
+    assign rx_rec_cfg = (data_OS == TS1_OS) && ((data[23:16] != expected_Lane) || (data[15:8] != expected_Link)); // TS1 with non-matched Link/Lane
+    assign rx_rec_idl = (data_OS == TS1_OS) && (data[23:16] == PAD); // TS1 with PAD-Lane
 
     // IDLE counting signals
     //assign inc_count_IDL = ( rx_data_shift[NUMBER_OF_STEPS] == { DATA_WIDTH{1'b0} } );
-    assign inc_count_IDL = COM_detected == 1'b0;
+    assign inc_count_IDL   = COM_detected == 1'b0;
     assign clear_count_IDL = !inc_count_IDL;
 
     // Rx Timeout counting signals
-    assign data_timeout = (data[127:48] == {ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1}) && (data[23:16] == PAD) && (data[15:8] == PAD); // TS1 with PAD-Lane and PAD-Link
-    assign inc_count_timeout = (COM_detected == 1'b1) && data_timeout;
+    assign data_timeout        = (data[127:48] == {10{ID1}}) && (data[23:16] == PAD) && (data[15:8] == PAD); // TS1 with PAD-Lane and PAD-Link
+    assign inc_count_timeout   = (COM_detected == 1'b1) && data_timeout;
     assign clear_count_timeout = (COM_detected == 1'b1) && !data_timeout && (rx_count_timeout != TIMEOUT_MAX_COUNT);
+
+    // Recovery.RcvrCfg counting signals
+    assign inc_count_rec_cfg   = (COM_detected == 1'b1) && rx_rec_cfg;
+    assign clear_count_rec_cfg = (COM_detected == 1'b1) && !rx_rec_cfg && (rx_count_rec_cfg != REC_CFG_MAX_COUNT);
+
+    // Recovery.Idle counting signals
+    assign inc_count_rec_idle   = (COM_detected == 1'b1) && rx_rec_idl;
+    assign clear_count_rec_idle = (COM_detected == 1'b1) && !rx_rec_idl && (rx_count_rec_idle != REC_IDLE_MAX_COUNT);
 
     // Detect special characters (STP, SDP or END) in all symbol positions
     generate
         genvar j;
         for (j = 0; j < DATA_BYTES; j = j + 1) begin
-            assign char_is_K[j] = (rx_data_DLL[8*j +: 8] == STP) || (rx_data_DLL[8*j +: 8] == SDP);
+            assign char_is_K[j]   = (rx_data_DLL[8*j +: 8] == STP) || (rx_data_DLL[8*j +: 8] == SDP);
             assign char_is_END[j] = (rx_data_DLL[8*j +: 8] == _END);
         end
     endgenerate
 
-    assign K_detected = |char_is_K;
+    assign K_detected   = |char_is_K;
     assign END_detected = |char_is_END;
 
 endmodule
-    /*
-    generate
-        if ( DATA_WIDTH == 64 ) begin
-            // For DATA_WIDTH = 64, COM can be at position 0 or 4 in the received data due to alignment
-            // When byte_is_aligned, COM can only be at position 0 or 4 the whole time until alignment reset
-            reg comma_is_middle; // COM at position 4 in the received data
-            reg [31:0] data_reg; // Temporary storage for upper 4 bytes when COM is at position 4
-            reg data_rx_done;
-            reg data_before_COM; // COM at position 4 and there is previous data that needs to be stored
-            always @ (posedge clk or posedge reset) begin
-                if ( reset ) begin
-                    step <= 0;
-                    COM_detected <= 1'b0;
-                    data <= {PATTERN_WIDTH{1'b0}};
-                    comma_is_middle <= 1'b0;
-                    data_rx_done <= 1'b0;
-                    data_before_COM <= 1'b0;
-                end
-                else begin
-                    if ( rx_data[7:0] == COM) begin // COM at position 0
-                        COM_detected <= 1'b1;
-                        data[63:0] <= rx_data;
-                        step <= 1;
-                        comma_is_middle <= 1'b0;
-                        data_rx_done <= 1'b0;
-                    end else if ( rx_data[39:32] == COM ) begin // COM at position 4
-                        COM_detected <= 1'b1;
-                        data_reg[31:0] <= rx_data[63:32]; // Store upper 4 bytes for next cycle
-                        data[127:96] <= rx_data[31:0];    // Assign lower 4 bytes to previous sequence
-                        step <= 0;
-                        comma_is_middle <= 1'b1;
-                        if (data_before_COM == 1'b0) begin // No previous data to be stored
-                            data_before_COM <= 1'b1;
-                            data_rx_done <= 1'b0;
-                        end else begin // Previous data to be stored, complete assembly of previous sequence
-                            data_before_COM <= 1'b1;
-                            data_rx_done <= 1'b1;
-                        end
-                    end else if ( (step == 0) && (COM_detected == 1'b1) && (comma_is_middle == 1'b1) ) begin
-                        data[31:0] <= data_reg[31:0];
-                        data[95:32] <= rx_data[63:0];
-                        step <= 1;
-                        data_rx_done <= 1'b0;
-                    end else if ( (step == 1) && (COM_detected == 1'b1) && (comma_is_middle == 1'b1) ) begin
-                        data[127:96] <= rx_data[31:0];
-                        data_rx_done <= 1'b1;
-                        COM_detected <= 1'b0;
-                        step <= 2;
-                        data_before_COM <= 1'b0;
-                    end else if ( (step == 1) && (COM_detected == 1'b1) && (comma_is_middle == 1'b0) ) begin
-                        data[127:64] <= rx_data;
-                        data_rx_done <= 1'b1;
-                        COM_detected <= 1'b0;
-                        step <= 2;
-                    end else begin
-                        step <= 0;
-                        COM_detected <= 1'b0;
-                        data <= {PATTERN_WIDTH{1'b0}};
-                        comma_is_middle <= 1'b0;
-                        data_rx_done <= 1'b0;
-                    end
-                end
-            end
-
-            // Ordered Set received validation
-            // OS_valid = 1 for one clock cycle when an Ordered Set is correctly received
-            always @ (posedge clk or posedge reset) begin
-                if ( reset ) begin
-                    OS_valid <= 1'b0;
-                end
-                else begin
-                    if ( (data_rx_done == 1'b1) && rx_valid ) begin
-                        OS_valid <= 1'b1;
-                    end else begin
-                        OS_valid <= 1'b0;
-                    end
-                end
-            end
-
-            // Ordered Set received detection
-            // OS_detected = 1 for one clock cycle when an Ordered Set received
-            always @ (posedge clk or posedge reset) begin
-                if ( reset ) begin
-                    OS_detected <= 1'b0;
-                    detected_Link <= 8'h00;
-                    detected_Lane <= 8'h00;
-                end
-                else begin
-                    if ( (data_rx_done == 1'b1) && rx_OS ) begin
-                        OS_detected <= 1'b1;
-                        detected_Link <= data[15:8];
-                        detected_Lane <= data[23:16];
-                    end else begin
-                        OS_detected <= 1'b0;
-                        detected_Link <= 8'h00;
-                        detected_Lane <= 8'h00;
-                    end
-                end
-            end
-
-            assign TS1_pattern = {ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, expected_Ctrl, 8'h02, 8'h00, expected_Lane, expected_Link, COM};
-            assign TS2_pattern = {ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, expected_Ctrl, 8'h02, 8'h00, expected_Lane, expected_Link, COM};
-            assign TS1_OS = {ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, 8'h00, 8'h02, 8'h00, PAD, PAD, COM};
-            assign TS2_OS = {ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, 8'h00, 8'h02, 8'h00, PAD, PAD, COM};
-
-            assign inc_count   = (data_rx_done == 1'b1) && rx_valid;
-            assign clear_count = (data_rx_done == 1'b1) && !rx_valid && (rx_count != max_count);
-
-            // TS position shifted according to the COM position in the received data
-            assign rx_OS    = (TS1_pattern_en && data[127:48] == TS1_OS[127:48] && data[7:0] == COM) || (TS2_pattern_en && data[127:48] == TS2_OS[127:48] && data[7:0] == COM);
-            assign rx_valid = (TS1_pattern_en && data[127:0] == TS1_pattern) || (TS2_pattern_en && data[127:0] == TS2_pattern);
-        end else begin
-            always @ (posedge clk or posedge reset) begin
-                if ( reset ) begin
-                    step <= 0;
-                    COM_detected <= 1'b0;
-                    data <= {PATTERN_WIDTH{1'b0}};
-                end
-                else begin
-                    if ( rx_data[7:0] == COM ) begin
-                        COM_detected <= 1'b1;
-                        data[DATA_WIDTH - 1 : 0] <= rx_data;
-                        step <= 1;
-                    end else if ( (step != NUMBER_OF_STEPS) && (COM_detected == 1'b1) ) begin
-                        data[DATA_WIDTH * step +: DATA_WIDTH] <= rx_data;
-                        step <= step + 1;
-                    end else begin
-                        step <= 0;
-                        COM_detected <= 1'b0;
-                        data <= {PATTERN_WIDTH{1'b0}};
-                    end
-                end
-            end
-
-            // Ordered Set received validation
-            // OS_valid = 1 for one clock cycle when an Ordered Set is correctly received
-            always @ (posedge clk or posedge reset) begin
-                if ( reset ) begin
-                    OS_valid <= 1'b0;
-                end
-                else begin
-                    if ( (step == NUMBER_OF_STEPS) && rx_valid ) begin
-                        OS_valid <= 1'b1;
-                    end else begin
-                        OS_valid <= 1'b0;
-                    end
-                end
-            end
-
-            // Ordered Set received detection
-            // OS_detected = 1 for one clock cycle when an Ordered Set received
-            always @ (posedge clk or posedge reset) begin
-                if ( reset ) begin
-                    OS_detected <= 1'b0;
-                    detected_Link <= 8'h00;
-                    detected_Lane <= 8'h00;
-                end
-                else begin
-                    if ( (step == NUMBER_OF_STEPS) && rx_OS ) begin
-                        OS_detected <= 1'b1;
-                        detected_Link <= data[15:8];
-                        detected_Lane <= data[23:16];
-                    end else begin
-                        OS_detected <= 1'b0;
-                        detected_Link <= 8'h00;
-                        detected_Lane <= 8'h00;
-                    end
-                end
-            end
-
-            assign TS1_pattern = {ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, expected_Ctrl, 8'h02, 8'h00, expected_Lane, expected_Link, COM};
-            assign TS2_pattern = {ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, expected_Ctrl, 8'h02, 8'h00, expected_Lane, expected_Link, COM};
-            assign TS1_OS = {ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, ID1, 8'h00, 8'h02, 8'h00, PAD, PAD, COM};
-            assign TS2_OS = {ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, ID2, 8'h00, 8'h02, 8'h00, PAD, PAD, COM};
-
-            assign inc_count   = (step == NUMBER_OF_STEPS) && rx_valid;
-            assign clear_count = (step == NUMBER_OF_STEPS) && !rx_valid && (rx_count != max_count);
-
-            // TS position shifted according to the COM position in the received data
-            assign rx_OS    = (TS1_pattern_en && data[127:48] == TS1_OS[127:48] && data[7:0] == COM) || (TS2_pattern_en && data[127:48] == TS2_OS[127:48] && data[7:0] == COM);
-            assign rx_valid = (TS1_pattern_en && data[127:0] == TS1_pattern) || (TS2_pattern_en && data[127:0] == TS2_pattern);
-        end
-    endgenerate
-    */

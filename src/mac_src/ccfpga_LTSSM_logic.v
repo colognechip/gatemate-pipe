@@ -39,27 +39,32 @@ module ccfpga_LTSSM_logic #(
    wire       L0_enabled;           // L0 state
 
    // Rx
-   wire       s_rx_flag_rst;        // Receiver flag Reset from FSM
-   wire       s_rx_rst;             // Receiver flag Reset
-   wire       s_rx_OS_rst;          // Receiver OS flag Reset
-   wire       s_rx_IDLE_rst;        // Receiver IDLE flag Reset
-   wire       s_rx_flag_IDLE;       // Max count for received IDLE reached
-   reg  [7:0] expected_Link;        // Expected link number in Ordered Set
-   reg  [7:0] expected_Lane;        // Expected lane number in Ordered Set
-   reg  [7:0] expected_Ctrl;        // Expected control
-   wire       s_link_detected_rst;  // Link Detected Reset from FSM
-   wire       s_lane_detected_rst;  // Lane Detected Reset from FSM
-   reg        link_detected;        // Link number detected
-   reg        lane_detected;        // Lane number detected
-   wire [3:0] rx_max_count;         // Max count for received Ordered Set
-   wire       TS1_pattern_en;       // Enable TS1 pattern
-   wire       TS2_pattern_en;       // Enable TS2 pattern
-   wire       OS_detected;          // Receiver detects Ordered Set
-   wire       OS_valid;             // Received OS is valid
-   wire       s_rx_flag_OS;         // Max count for received Orderes Set reached
-   wire [7:0] Link_number;          // Detected link number
-   wire [7:0] Lane_number;          // Detected lane number
-   wire [7:0] Control_bits;         // Detected control bits
+   wire       s_rx_flag_rst;            // Receiver flag Reset from FSM
+   wire       s_rx_rst;                 // Receiver flag Reset
+   wire       s_rx_OS_rst;              // Receiver OS flag Reset
+   wire       s_rx_IDLE_rst;            // Receiver IDLE flag Reset
+   wire       s_rx_flag_IDLE;           // Max count for received IDLE reached
+   reg  [7:0] expected_Link;            // Expected link number in Ordered Set
+   reg  [7:0] expected_Lane;            // Expected lane number in Ordered Set
+   reg  [7:0] expected_Ctrl;            // Expected control
+   wire       s_link_detected_rst;      // Link Detected Reset from FSM
+   wire       s_lane_detected_rst;      // Lane Detected Reset from FSM
+   reg        link_detected;            // Link number detected
+   reg        lane_detected;            // Lane number detected
+   wire [3:0] rx_max_count;             // Max count for received Ordered Set
+   wire       TS1_pattern_en;           // Enable TS1 pattern
+   wire       TS2_pattern_en;           // Enable TS2 pattern
+   wire       OS_detected;              // Receiver detects Ordered Set
+   wire       OS_valid;                 // Received OS is valid
+   wire       OS_rec_cfg_detected;      // Received OS with non-match Link/Lane in Recovery.RcvrCfg
+   wire       s_rx_flag_OS;             // Max count for received Orderes Set reached
+   wire [7:0] Link_number;              // Detected link number
+   wire [7:0] Lane_number;              // Detected lane number
+   wire [7:0] Control_bits;             // Detected control bits
+   wire       s_recovery_idle_rx_flag_rst;  // Recovery Idle Rx Reset flag (TS1 with PAD-Lane)
+   wire       s_recovery_idle_rx_flag;      // Recovery Idle Rx flag (TS1 with PAD-Lane)
+   wire       s_recovery_cfg_rx_flag_rst;   // Recovery Rcvrcfg Rx Reset flag (TS1 with non-matched Link/Lane)
+   wire       s_recovery_cfg_rx_flag;       // Recovery Rcvrcfg Rx flag (TS1 with non-matched Link/Lane)
 
    // Tx
    wire s_tx_flag_rst;        // Transmitter flag Reset from FSM
@@ -126,16 +131,17 @@ module ccfpga_LTSSM_logic #(
    wire                  inversion_detected;
 
    // Assignments
-   assign s_rx_OS_rst = fsm_state != 5'b01001 ? s_rx_rst : 1'b1;
-   assign s_rx_IDLE_rst = fsm_state == 5'b01001 ? s_rx_rst : 1'b1;
+   wire idle_state = fsm_state == 5'b01001 || fsm_state == 5'b10101; // CONFIG_IDLE or RECOVERY.IDLE
+   assign s_rx_OS_rst   = !idle_state ? s_rx_rst : 1'b1;
+   assign s_rx_IDLE_rst = idle_state ? s_rx_rst : 1'b1;
 
-   assign s_tx_OS_flag_rst = fsm_state != 5'b01001 ? s_tx_flag_rst : 1'b1;
-   assign s_tx_IDLE_flag_rst = fsm_state == 5'b01001 ? s_tx_flag_rst : 1'b1;
+   assign s_tx_OS_flag_rst   = !idle_state ? s_tx_flag_rst : 1'b1;
+   assign s_tx_IDLE_flag_rst = idle_state ? s_tx_flag_rst : 1'b1;
 
    assign o_PowerDown = fsm_state == 5'b00000 ? 2'b10 : fsm_state == 5'b00001 ? 2'b10 : 2'b00; // Power Down for DETECT
    assign o_LinkUp = fsm_state == 5'b01010 ? 1'b1 : fsm_state == 5'b01001 ? 1'b1 : 1'b0; // Link Up for L0 or CONFIG_IDLE
-   assign s_rx_flag = ((s_rx_flag_OS && (fsm_state != 5'b01001)) || (s_rx_flag_IDLE && (fsm_state == 5'b01001)));
-   assign s_tx_flag = (s_tx_flag_OS && (fsm_state != 5'b01001)) || (s_tx_flag_IDLE && (fsm_state == 5'b01001));
+   assign s_rx_flag = ((s_rx_flag_OS && !idle_state) || (s_rx_flag_IDLE && idle_state));
+   assign s_tx_flag = (s_tx_flag_OS && !idle_state) || (s_tx_flag_IDLE && idle_state);
    assign s_rx_rst  = ((fsm_state == 5'b10010) ? s_link_detected_rst : (fsm_state == 5'b10011) ? s_lane_detected_rst : s_rx_flag_rst) || ~i_RxValid;
 
    // Rx
@@ -151,7 +157,10 @@ module ccfpga_LTSSM_logic #(
                          fsm_state == 5'b01000 ? 4'b1000 :
                          fsm_state == 5'b01001 ? 4'b1000 :
                          fsm_state == 5'b10010 ? 4'b0001 :
-                         fsm_state == 5'b10011 ? 4'b0001 : 4'b1111;
+                         fsm_state == 5'b10011 ? 4'b0001 :
+                         fsm_state == 5'b01011 ? 4'b1000 :
+                         fsm_state == 5'b10100 ? 4'b1000 :
+                         fsm_state == 5'b10101 ? 4'b1000 : 4'b1111;
 
    assign TS1_pattern_en = fsm_state == 5'b00010 ? 1'b1 :
                            fsm_state == 5'b00011 ? 1'b0 :
@@ -162,7 +171,10 @@ module ccfpga_LTSSM_logic #(
                            fsm_state == 5'b01000 ? 1'b0 :
                            fsm_state == 5'b01001 ? 1'b0 :
                            fsm_state == 5'b10010 ? 1'b1 :
-                           fsm_state == 5'b10011 ? 1'b1 : 1'b0;
+                           fsm_state == 5'b10011 ? 1'b1 :
+                           fsm_state == 5'b01011 ? 1'b1 :
+                           fsm_state == 5'b10100 ? 1'b0 :
+                           fsm_state == 5'b10101 ? 1'b0 : 1'b0;
 
    assign TS2_pattern_en = fsm_state == 5'b00010 ? 1'b1 :
                            fsm_state == 5'b00011 ? 1'b1 :
@@ -173,12 +185,16 @@ module ccfpga_LTSSM_logic #(
                            fsm_state == 5'b01000 ? 1'b1 :
                            fsm_state == 5'b01001 ? 1'b0 :
                            fsm_state == 5'b10010 ? 1'b0 :
-                           fsm_state == 5'b10011 ? 1'b0 : 1'b0;
+                           fsm_state == 5'b10011 ? 1'b0 :
+                           fsm_state == 5'b01011 ? 1'b1 :
+                           fsm_state == 5'b10100 ? 1'b1 :
+                           fsm_state == 5'b10101 ? 1'b0 : 1'b0;
 
    // Tx
    assign tx_max_count   = fsm_state == 5'b00011 ? 5'b10000 :
                            fsm_state == 5'b01000 ? 5'b10000 :
-                           fsm_state == 5'b01001 ? 5'b10000 : 5'b11111;
+                           fsm_state == 5'b01001 ? 5'b10000 :
+                           fsm_state == 5'b10100 ? 5'b10000 : 5'b11111;
 
    assign OS_type        = fsm_state == 5'b00010 ? 1'b0 :
                            fsm_state == 5'b00011 ? 1'b1 :
@@ -186,7 +202,9 @@ module ccfpga_LTSSM_logic #(
                            fsm_state == 5'b00101 ? 1'b0 :
                            fsm_state == 5'b00110 ? 1'b0 :
                            fsm_state == 5'b00111 ? 1'b0 :
-                           fsm_state == 5'b01000 ? 1'b1 : 1'b0;
+                           fsm_state == 5'b01000 ? 1'b1 :
+                           fsm_state == 5'b01011 ? 1'b0 :
+                           fsm_state == 5'b10100 ? 1'b1 : 1'b0;
 
    // Timeout
    assign clk_max_count = fsm_state == 5'b00000 ? 12*1000000 / CYCLE_TIME : //12ms
@@ -196,7 +214,10 @@ module ccfpga_LTSSM_logic #(
                           fsm_state == 5'b00101 ?  2*1000000 / CYCLE_TIME : //2ms
                           fsm_state == 5'b00110 ?  2*1000000 / CYCLE_TIME : //2ms
                           fsm_state == 5'b01000 ?  2*1000000 / CYCLE_TIME : //2ms
-                          fsm_state == 5'b01001 ?  2*1000000 / CYCLE_TIME : 2*1000000 / CYCLE_TIME; //2ms
+                          fsm_state == 5'b01001 ?  2*1000000 / CYCLE_TIME : //2ms
+                          fsm_state == 5'b01011 ? 24*1000000 / CYCLE_TIME : //24ms
+                          fsm_state == 5'b10100 ? 48*1000000 / CYCLE_TIME : //48ms
+                          fsm_state == 5'b10101 ?  2*1000000 / CYCLE_TIME : 2*1000000 / CYCLE_TIME; //2ms
 
    assign s_timeout_clk_en = fsm_state == 5'b00111 ? 1'b0 : 1'b1;
    assign s_timeout_OS_en  = (( fsm_state == 5'b00101 || fsm_state == 5'b00110 ) || fsm_state == 5'b00111) ? 1'b1 : 1'b0;
@@ -213,6 +234,8 @@ module ccfpga_LTSSM_logic #(
       .s_rx_flag                    ( s_rx_flag      ),                // Rx Flag
       .s_tx_flag                    ( s_tx_flag      ),                // Tx Flag
       .s_polling_active_tx_flag     ( s_polling_active_tx_flag ),      // Polling Active Tx Flag
+      .s_recovery_cfg_rx_flag       ( s_recovery_cfg_rx_flag ),        // Recovery Rcvrcfg Rx Flag
+      .s_recovery_idle_rx_flag      ( s_recovery_idle_rx_flag  ),      // Recovery Idle Rx Flag
       .i_RxElecIdle                 ( i_RxElecIdle   ),                // Electrical Idle at Receiver
       .link_detected                ( link_detected  ),                // Link Detected
       .lane_detected                ( lane_detected  ),                // Lane Detected
@@ -224,11 +247,13 @@ module ccfpga_LTSSM_logic #(
       .o_send_IDLE_trigger          ( send_IDLE_trigger ),             // Trigger the sending of IDLE
       .o_send_data_trigger          ( send_data_trigger ),             // Trigger the sending of data
       .o_fsm_state                  ( fsm_state         ),             // fsm status
-      .s_clk_timeout_rst            ( s_clk_timeout_rst ),            // Clock Timeout Reset
-      .s_OS_timeout_rst             ( s_OS_timeout_rst  ),            // OS Timeout Reset
+      .s_clk_timeout_rst            ( s_clk_timeout_rst ),             // Clock Timeout Reset
+      .s_OS_timeout_rst             ( s_OS_timeout_rst  ),             // OS Timeout Reset
       .s_rx_flag_rst                ( s_rx_flag_rst  ),                // Rx Flag Reset
       .s_tx_flag_rst                ( s_tx_flag_rst  ),                // Tx Flag Reset
       .s_polling_active_tx_flag_rst ( s_polling_active_tx_flag_rst ),  // Polling Active Tx Reset flag
+      .s_recovery_cfg_rx_flag_rst   ( s_recovery_cfg_rx_flag_rst   ),  // Recovery Rcvrcfg Rx Reset flag
+      .s_recovery_idle_rx_flag_rst  ( s_recovery_idle_rx_flag_rst  ),  // Recovery Idle Rx Reset flag
       .s_link_detected_rst          ( s_link_detected_rst          ),  // Link Detected Reset
       .s_lane_detected_rst          ( s_lane_detected_rst          )   // Lane Detected Reset
    );
@@ -236,40 +261,45 @@ module ccfpga_LTSSM_logic #(
 
    // Rx counter
    ccfpga_rx_MAC #(
-      .COUNT_WIDTH        ( 4                 ),
-      .PATTERN_WIDTH      ( PATTERN_WIDTH     ),
-      .DATA_BYTES         ( DATA_BYTES        )
+      .COUNT_WIDTH           ( 4                 ),
+      .PATTERN_WIDTH         ( PATTERN_WIDTH     ),
+      .DATA_BYTES            ( DATA_BYTES        )
    ) rx_MAC_inst (
-      .clk                ( i_PCLK            ),
-      .reset              ( reset             ),
-      .OS_reset_flag      ( s_rx_OS_rst       ),
-      .IDLE_reset_flag    ( s_rx_IDLE_rst     ),
-      .timeout_reset_flag ( s_OS_timeout_rst  ),
+      .clk                   ( i_PCLK            ),
+      .reset                 ( reset             ),
+      .OS_reset_flag         ( s_rx_OS_rst       ),
+      .IDLE_reset_flag       ( s_rx_IDLE_rst     ),
+      .timeout_reset_flag    ( s_OS_timeout_rst  ),
+      .rec_cfg_reset_flag    ( s_recovery_cfg_rx_flag  ),
+      .rec_idle_reset_flag   ( s_recovery_idle_rx_flag ),
 
-      .rx_data            ( unscrambled_data  ),
-      .expected_Link      ( expected_Link     ),
-      .expected_Lane      ( expected_Lane     ),
-      .expected_Ctrl      ( expected_Ctrl     ),
-      .max_count          ( rx_max_count      ),
-      .TS1_pattern_en     ( TS1_pattern_en    ),
-      .TS2_pattern_en     ( TS2_pattern_en    ),
+      .rx_data               ( unscrambled_data  ),
+      .expected_Link         ( expected_Link     ),
+      .expected_Lane         ( expected_Lane     ),
+      .expected_Ctrl         ( expected_Ctrl     ),
+      .max_count             ( rx_max_count      ),
+      .TS1_pattern_en        ( TS1_pattern_en    ),
+      .TS2_pattern_en        ( TS2_pattern_en    ),
 
-      .L0_enabled         ( L0_enabled        ),
+      .L0_enabled            ( L0_enabled        ),
 
-      .timeout_flag       ( s_timeout_OS      ),
+      .timeout_flag          ( s_timeout_OS      ),
 
-      .OS_valid           ( OS_valid          ),
-      .OS_detected        ( OS_detected       ),
-      .OS_count_maxed     ( s_rx_flag_OS      ),
-      .inversion_detected ( inversion_detected),
-      .detected_Link      ( Link_number       ),
-      .detected_Lane      ( Lane_number       ),
-      .detected_Ctrl      ( Control_bits      ),
+      .OS_valid              ( OS_valid          ),
+      .OS_detected           ( OS_detected       ),
+      .OS_count_maxed        ( s_rx_flag_OS      ),
+      .inversion_detected    ( inversion_detected),
+      .detected_Link         ( Link_number       ),
+      .detected_Lane         ( Lane_number       ),
+      .detected_Ctrl         ( Control_bits      ),
 
-      .IDLE_detected      ( IDLE_detected     ),
-      .IDLE_count_maxed   ( s_rx_flag_IDLE    ),
+      .IDLE_detected         ( IDLE_detected     ),
+      .IDLE_count_maxed      ( s_rx_flag_IDLE    ),
+      .rec_cfg_count_maxed   ( s_recovery_cfg_rx_flag  ),
+      .OS_rec_cfg_detected   ( OS_rec_cfg_detected     ),
+      .rec_idle_count_maxed  ( s_recovery_idle_rx_flag ),
 
-      .rx_data_DLL        ( o_RxData          )
+      .rx_data_DLL           ( o_RxData          )
    );
 
    // Tx Count
@@ -283,6 +313,7 @@ module ccfpga_LTSSM_logic #(
       .polling_active_reset_flag ( s_polling_active_tx_flag_rst  ),
       .OS_sent                   ( OS_sent                       ),
       .OS_valid                  ( OS_valid                      ),
+      .OS_rec_cfg_detected       ( OS_rec_cfg_detected           ),
       .IDLE_sent                 ( IDLE_sent                     ),
       .IDLE_detected             ( IDLE_detected                 ),
       .OS_max_count              ( tx_max_count                  ),
@@ -327,6 +358,12 @@ module ccfpga_LTSSM_logic #(
          end
       end else if ( fsm_state == 5'b01000 ) begin // CONFIG_COMPLETE
          expected_Ctrl <= Control_bits;
+      end else if ( fsm_state == 5'b00000 ) begin // DETECT_QUIET
+         expected_Link <= 8'hF7;
+         expected_Lane <= 8'hF7;
+         expected_Ctrl <= 8'h00;
+         link_detected <= 1'b0;
+         lane_detected <= 1'b0;
       end
    end
 
@@ -469,9 +506,10 @@ module ccfpga_LTSSM_logic #(
 
    // TODO: Question: if we sending nothing, maybe waiting for data from upper layer
    // should the scrambler_en disabled?
-   assign scrambler_en = (sending_data | sending_OS | send_IDLE_trigger | sending_SKP) & ~expected_Ctrl[3];
+   //assign scrambler_en = (sending_data | sending_OS | send_IDLE_trigger | sending_SKP) & ~expected_Ctrl[3];
+   assign scrambler_en = (sending_data | sending_OS | sending_SKP) & ~expected_Ctrl[3];
    assign descrambler_en = ~expected_Ctrl[3];
    assign tx_char_is_training_sequence = sending_OS ? {DATA_BYTES{1'b1}} : {DATA_BYTES{1'b0}};
-   assign rx_char_is_training_sequence = fsm_state == 5'b01010 ? {DATA_BYTES{1'b0}} : {DATA_BYTES{1'b1}};
+   assign rx_char_is_training_sequence = (fsm_state == 5'b01010 | fsm_state == 5'b01001) ? {DATA_BYTES{1'b0}} : {DATA_BYTES{1'b1}};
 
 endmodule
