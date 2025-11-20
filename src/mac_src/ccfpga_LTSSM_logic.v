@@ -510,6 +510,6 @@ module ccfpga_LTSSM_logic #(
    assign scrambler_en = (sending_data | sending_OS | sending_SKP) & ~expected_Ctrl[3];
    assign descrambler_en = ~expected_Ctrl[3];
    assign tx_char_is_training_sequence = sending_OS ? {DATA_BYTES{1'b1}} : {DATA_BYTES{1'b0}};
-   assign rx_char_is_training_sequence = (fsm_state == 5'b01010 | fsm_state == 5'b01001) ? {DATA_BYTES{1'b0}} : {DATA_BYTES{1'b1}};
+   assign rx_char_is_training_sequence = (fsm_state == 5'b01010 | fsm_state == 5'b01001 | fsm_state == 5'b10110) ? {DATA_BYTES{1'b0}} : {DATA_BYTES{1'b1}};
 
 endmodule
