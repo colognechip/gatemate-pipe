@@ -1,5 +1,7 @@
-// LFSR with polynomial x^16 + x^5 + x^4 +x^3 +1
-// Parallel scrambler
+//----------------------------------------------------------------------------------------
+// Description: Top module for the parallel scrambler
+// - LFSR with polynomial x^16 + x^5 + x^4 +x^3 +1
+//========================================================================================
 
 module ccfpga_scrambler #(
     parameter DATA_BYTES   = 8,

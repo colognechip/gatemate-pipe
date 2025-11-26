@@ -1,3 +1,7 @@
+//----------------------------------------------------------------------------------------
+// Description: This module calculates and advances the LFSR for scrambler operation
+//========================================================================================
+
 module ccfpga_scrambler_byte(
     input wire  [7:0] data_in,
     input wire        scrambler_en,

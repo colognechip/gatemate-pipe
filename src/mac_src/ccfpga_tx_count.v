@@ -1,4 +1,9 @@
-// Count number of transmitted Ordered Sets sequences after receiving one Ordered Set sequence
+//-----------------------------------------------------------------------------
+// Description: Count the number of transmitted sequences after receiving one
+// sequence (IDLE or Ordered Set)
+// - Polling Active does not require receiving a sequence to start counting
+//=============================================================================
+
 module ccfpga_tx_count #(
     parameter COUNT_WIDTH = 5,
     parameter DATA_BYTES  = 8,

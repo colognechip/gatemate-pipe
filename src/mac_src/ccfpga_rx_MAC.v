@@ -1,7 +1,13 @@
-// Count the number of received consecutive Ordered Sets sequences
-// Link and lane define the expected Link and Lane numbers in the received Ordered Sets
-// Ctrl defines the expected control signal for the received Ordered Sets
-// Link and Lane check necessary?
+//----------------------------------------------------------------------------------------
+// Description: This module handles the Rx side of PHY/MAC
+// - It counts the number of consecutive received Ordered Set sequences, Idle sequences
+// - Link and lane defines the expected Link and Lane numbers in the received Ordered Sets
+// - Ctrl defines the expected control signal for the received Ordered Sets
+// - It handles and forwards the received data to DLL
+// - It detects inversion in the received Ordered Sets
+// - It handles Rx timeout detection
+// - The received data is stored in a shift register for processing
+//========================================================================================
 
 module ccfpga_rx_MAC #(
     parameter COUNT_WIDTH = 4,

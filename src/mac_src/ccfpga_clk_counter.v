@@ -1,6 +1,9 @@
-// Count up at each clock cycle until reaching a target count value
-// Reset to zero the count
-// Flag output when the target count value is reached
+//----------------------------------------------------------------------------------
+// Description: This is a generic clock counter module
+// - Count up at each clock cycle until reaching a target count value
+// - Reset enabled zeros out the count
+// - Flag output is set when the target count value is reached and hold until reset
+//==================================================================================
 
 module ccfpga_clk_counter #(
     parameter  BIT_WIDTH = 21        // Width of Count Register

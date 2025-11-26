@@ -1,3 +1,6 @@
+//----------------------------------------------------------------------------
+// Description: This module detects valid data from DLL and sends it out
+//============================================================================
 
 module ccfpga_send_data #(
    parameter DATA_BYTES = 8,

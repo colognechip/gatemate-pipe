@@ -1,3 +1,10 @@
+//----------------------------------------------------------------------------
+// Description: This module defines the LTSSM for PCIe
+// - It handles the state transitions and based on input flags and conditions
+// - Outputs appropriate triggers for OS, IDLE, and data transmission
+// - Outputs reset flags for timeouts, Rx/Tx counters, and link/lane detection
+//============================================================================
+
 module ccfpga_LTSSM_fsm #(
    parameter DATA_BYTES = 8,
    parameter DATA_WIDTH = DATA_BYTES*8
@@ -34,11 +41,7 @@ module ccfpga_LTSSM_fsm #(
    output reg                   s_lane_detected_rst           // Lane Detected Reset
    );
 
-   // Parameters
-   localparam OS_WIDTH        = 128;
-
    reg [4:0] s_state, s_next_state;
-
    assign o_fsm_state         = s_state;
 
    // FSM States

@@ -1,4 +1,8 @@
-// Generate SKP OS every 1440 symbol times
+//------------------------------------------------------------------------------
+// Description: This module generates SKP OS for compensating the clock mismatch
+// - SKP OS needs to be sent between 1180 to 1538 symbol times
+//==============================================================================
+
 module ccfpga_SKP_generator #(
     parameter SKP_WIDTH  = 32,
     parameter DATA_BYTES = 8,

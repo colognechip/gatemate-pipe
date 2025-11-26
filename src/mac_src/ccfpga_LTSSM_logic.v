@@ -1,3 +1,9 @@
+//--------------------------------------------------------------------------
+// Description: This module is the top module for the PHY/MAC
+// - It instantiates the LTSSM FSM, Rx MAC, Tx counter, Timeout blocks,
+// Data Sending modules, Scrambler and Descrambler
+//==========================================================================
+
 `timescale 1ns/100fs
 
 module ccfpga_LTSSM_logic #(
@@ -30,6 +36,7 @@ module ccfpga_LTSSM_logic #(
    output wire                   o_LinkUp        // Link is on
    );
 
+   // Define cycle time based on data width
    localparam CYCLE_TIME = DATA_BYTES == 8 ? 32 : DATA_BYTES == 4 ? 16 : DATA_BYTES == 2 ? 8 : DATA_BYTES == 1 ? 4 : 0; // in ns
 
    // Reset
@@ -93,7 +100,7 @@ module ccfpga_LTSSM_logic #(
    wire s_rx_flag;
    wire s_tx_flag;
 
-   // Send data
+   // Sending triggers
    wire send_IDLE_trigger;
    wire send_OS_trigger;
    wire sending_OS;
@@ -259,7 +266,7 @@ module ccfpga_LTSSM_logic #(
    );
    // ------------------
 
-   // Rx counter
+   // MAC Rx
    ccfpga_rx_MAC #(
       .COUNT_WIDTH           ( 4                 ),
       .PATTERN_WIDTH         ( PATTERN_WIDTH     ),

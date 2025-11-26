@@ -1,4 +1,7 @@
-// Send 128-bit Ordered Sets, which will be transmitted through multiple cycles depending on the DATA_WIDTH
+//-----------------------------------------------------------------------------
+// Description: This module sends IDLE characters when triggered (IDLE = 8'h00)
+//=============================================================================
+
 module ccfpga_send_IDLE #(
    parameter IDLE_WIDTH = 8,
    parameter DATA_BYTES = 8,

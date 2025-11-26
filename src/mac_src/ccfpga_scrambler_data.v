@@ -1,3 +1,7 @@
+//----------------------------------------------------------------------------------------
+// Description: This module calculates the scrambled data
+//========================================================================================
+
 module ccfpga_scrambler_data #(
     parameter DATA_BYTES   = 8,
     parameter DATA_WIDTH   = DATA_BYTES*8

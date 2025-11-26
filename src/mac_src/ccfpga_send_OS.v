@@ -1,5 +1,9 @@
-// Send 128-bit Ordered Sets, which will be transmitted through multiple cycles depending on the DATA_WIDTH
-// OS_sent is set at the end for one cycle
+//----------------------------------------------------------------------------
+// Description: This module sends 128-bit Ordered Set, which will be
+// transmitted through multiple cycles depending on the DATA_WIDTH
+// - OS_sent flag is set at the end for one cycle
+//============================================================================
+
 module ccfpga_send_OS #(
    parameter PATTERN_WIDTH = 128,
    parameter PATTERN_BYTES = PATTERN_WIDTH/8,
