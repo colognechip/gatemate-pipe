@@ -20,7 +20,7 @@ module ccfpga_scrambler_byte(
             lfsr_out = 16'hFFFF;
         end else if (data_in == SKP || !scrambler_en) begin // no advancement of LFSR for SKP
             lfsr_out = lfsr_in;
-        end else begin
+        end else begin // Advance LFSR otherwise
             lfsr_out[0] = lfsr_in[8];
             lfsr_out[1] = lfsr_in[9];
             lfsr_out[2] = lfsr_in[10];

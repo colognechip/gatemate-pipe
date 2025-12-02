@@ -24,13 +24,13 @@ module ccfpga_send_data #(
    localparam EDB  = 8'hFE; // K30.7
    localparam PAD  = 8'hF7; // K23.7
 
-   wire K_detected;
+   wire                      K_detected;
    wire [DATA_BYTES - 1 : 0] char_is_K;
-   wire END_detected;
+   wire                      END_detected;
    wire [DATA_BYTES - 1 : 0] char_is_END;
    wire [DATA_BYTES - 1 : 0] txdatak_reg;
 
-   reg send_data_trigger;
+   reg                       send_data_trigger;
 
    always @ (posedge clk or posedge reset) begin
       if (reset) begin
@@ -38,18 +38,21 @@ module ccfpga_send_data #(
          txdatak <= { DATA_BYTES{1'b0} };
          send_data_trigger <= 1'b0;
          sending_data <= 1'b0;
-      end else if (L0_enabled == 1'b1) begin
+      end else if (L0_enabled == 1'b1) begin // Transmit data only when in state L0
          if (K_detected) begin
+            // STP or SDP detected, sending flag is set to 1
             txdata  <= txdata_DLL;
             txdatak <= txdatak_reg;
             send_data_trigger <= 1'b1;
             sending_data <= 1'b1;
          end else if (END_detected) begin
+            // END detected, send last data, sending flag is reset to 0
             txdata  <= txdata_DLL;
             txdatak <= txdatak_reg;
             send_data_trigger <= 1'b0;
             sending_data <= 1'b1;
          end else if (send_data_trigger == 1'b1) begin
+            // Continue sending data when sending flag is 1
             txdata  <= txdata_DLL;
             txdatak <= txdatak_reg;
             send_data_trigger <= 1'b1;
@@ -72,12 +75,12 @@ module ccfpga_send_data #(
    generate
       genvar i;
       for (i = 0; i < DATA_BYTES; i = i + 1) begin
-         assign char_is_K[i] = (txdata_DLL[8*i +: 8] == STP) || (txdata_DLL[8*i +: 8] == SDP);
+         assign char_is_K[i]   = (txdata_DLL[8*i +: 8] == STP) || (txdata_DLL[8*i +: 8] == SDP);
          assign char_is_END[i] = (txdata_DLL[8*i +: 8] == _END);
          assign txdatak_reg[i] = char_is_K[i] || char_is_END[i];
       end
    endgenerate
 
-   assign K_detected = |char_is_K;
+   assign K_detected   = |char_is_K;
    assign END_detected = |char_is_END;
 endmodule

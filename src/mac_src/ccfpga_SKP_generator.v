@@ -70,11 +70,13 @@ module ccfpga_SKP_generator #(
                     sending_SKP <= 1'b0;
                 end else if (SKP_send_enable) begin
                     if (number_of_queued_SKP >= DATA_WIDTH/SKP_WIDTH) begin
-                        txdata <= {SKP, SKP, SKP, COM, SKP, SKP, SKP, COM}; // SKP: K28.0
+                        // Send 2 SKP OS at once if more than 1 are queued
+                        txdata <= {SKP, SKP, SKP, COM, SKP, SKP, SKP, COM};
                         txdatak <= 8'b11111111;
                         sending_SKP <= 1'b1;
                     end else begin
-                        txdata <= {8'h00, 8'h00, 8'h00, 8'h00, SKP, SKP, SKP, COM}; // SKP: K28.0
+                        // Send 1 SKP OS with IDLE data otherwise
+                        txdata <= {8'h00, 8'h00, 8'h00, 8'h00, SKP, SKP, SKP, COM};
                         txdatak <= 8'b00001111;
                         sending_SKP <= 1'b1;
                     end
@@ -91,7 +93,7 @@ module ccfpga_SKP_generator #(
                     txdatak <= {DATA_BYTES{1'b0}};
                     sending_SKP <= 1'b0;
                 end else if (SKP_send_enable) begin
-                    txdata <= {SKP, SKP, SKP, COM}; // SKP: K28.0
+                    txdata <= {SKP, SKP, SKP, COM};
                     txdatak <= 4'b1111;
                     sending_SKP <= 1'b1;
                 end else begin

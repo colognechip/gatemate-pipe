@@ -35,17 +35,18 @@ module ccfpga_LTSSM_logic #(
 
    output wire                   o_LinkUp        // Link is on
    );
-
+//-------------------------------------------------------------------------------------------------------------------------------
+// Parameters
    // Define cycle time based on data width
    localparam CYCLE_TIME = DATA_BYTES == 8 ? 32 : DATA_BYTES == 4 ? 16 : DATA_BYTES == 2 ? 8 : DATA_BYTES == 1 ? 4 : 0; // in ns
-
+//-------------------------------------------------------------------------------------------------------------------------------
    // Reset
    wire       reset = !i_Reset_n;
-
    // L0 flags
    wire       L0_enabled;           // L0 state
-
-   // Rx
+//-------------------------------------------------------------------------------------------------------------------------------
+// Receiver side signals
+   wire       s_rx_flag;                // Receiver flag
    wire       s_rx_flag_rst;            // Receiver flag Reset from FSM
    wire       s_rx_rst;                 // Receiver flag Reset
    wire       s_rx_OS_rst;              // Receiver OS flag Reset
@@ -63,6 +64,7 @@ module ccfpga_LTSSM_logic #(
    wire       TS2_pattern_en;           // Enable TS2 pattern
    wire       OS_detected;              // Receiver detects Ordered Set
    wire       OS_valid;                 // Received OS is valid
+   wire       IDLE_detected;            // IDLE symbol detected
    wire       OS_rec_cfg_detected;      // Received OS with non-match Link/Lane in Recovery.RcvrCfg
    wire       s_rx_flag_OS;             // Max count for received Orderes Set reached
    wire [7:0] Link_number;              // Detected link number
@@ -72,20 +74,21 @@ module ccfpga_LTSSM_logic #(
    wire       s_recovery_idle_rx_flag;      // Recovery Idle Rx flag (TS1 with PAD-Lane)
    wire       s_recovery_cfg_rx_flag_rst;   // Recovery Rcvrcfg Rx Reset flag (TS1 with non-matched Link/Lane)
    wire       s_recovery_cfg_rx_flag;       // Recovery Rcvrcfg Rx flag (TS1 with non-matched Link/Lane)
-
-   // Tx
-   wire s_tx_flag_rst;        // Transmitter flag Reset from FSM
-   wire s_tx_OS_flag_rst;     // Transmitter flag reset
-   wire s_tx_IDLE_flag_rst;   // Transmitter IDLE flag reset
-   wire s_tx_flag_IDLE;       // Max count for transmitted IDLE reached
-   wire OS_sent;              // An OS is sent
-   wire [4:0] tx_max_count;   // Max count for transmitter
-   wire s_tx_flag_OS;         // Max count for transmitter reached
-   wire OS_type;              // Type of Ordered Set to be sent
-   wire s_polling_active_tx_flag;
-   wire s_polling_active_tx_flag_rst;
-
-   // Timeout
+//-------------------------------------------------------------------------------------------------------------------------------
+// Transmitter side signals
+   wire       s_tx_flag;            // Transmitter flag
+   wire       s_tx_flag_rst;        // Transmitter flag Reset from FSM
+   wire       s_tx_OS_flag_rst;     // Transmitter flag reset
+   wire       s_tx_IDLE_flag_rst;   // Transmitter IDLE flag reset
+   wire       s_tx_flag_IDLE;       // Max count for transmitted IDLE reached
+   wire       OS_sent;              // An OS is sent
+   wire [4:0] tx_max_count;         // Max count for transmitter
+   wire       s_tx_flag_OS;         // Max count for transmitter reached
+   wire       OS_type;              // Type of Ordered Set to be sent
+   wire       s_polling_active_tx_flag;
+   wire       s_polling_active_tx_flag_rst;
+//-------------------------------------------------------------------------------------------------------------------------------
+// Timeout signals
    wire s_clk_timeout_rst;    // Timeout reset
    wire s_OS_timeout_rst;     // Timeout reset
    wire [20:0] clk_max_count;  // Max count for timeout
@@ -94,18 +97,18 @@ module ccfpga_LTSSM_logic #(
    wire s_timeout_OS;         // Timeout due to received OS
    wire s_timeout_clk_en;     // Enable timeout due to clock
    wire s_timeout_OS_en;      // Enable timeout due to received OS
-
+//-------------------------------------------------------------------------------------------------------------------------------
+// FSM states
    wire [4:0] fsm_state;
-   wire IDLE_detected;        // IDLE symbol detected
-   wire s_rx_flag;
-   wire s_tx_flag;
-
-   // Sending triggers
-   wire send_IDLE_trigger;
-   wire send_OS_trigger;
-   wire sending_OS;
-   wire sending_data;
-   wire sending_SKP;
+//-------------------------------------------------------------------------------------------------------------------------------
+// Sending triggers and signals
+   wire       send_IDLE_trigger;   // Trigger to send IDLE
+   wire       send_OS_trigger;     // Trigger to send OS
+   wire       sending_OS;          // Sending OS flag
+   wire       sending_data;        // Sending data flag
+   wire       sending_SKP;         // Sending SKP flag
+//-------------------------------------------------------------------------------------------------------------------------------
+// Transmitted data signals
    wire [DATA_WIDTH-1:0] txdata_OS;
    wire [DATA_BYTES-1:0] txdatak_OS;
    wire [DATA_WIDTH-1:0] txdata_IDLE;
@@ -114,7 +117,8 @@ module ccfpga_LTSSM_logic #(
    wire [DATA_BYTES-1:0] txdatak_DLL;
    wire [DATA_WIDTH-1:0] txdata_SKP;
    wire [DATA_BYTES-1:0] txdatak_SKP;
-
+//-------------------------------------------------------------------------------------------------------------------------------
+// Scrambler and descrambler signals
    // Scrambler
    wire                  scrambler_en;
    wire [DATA_BYTES-1:0] tx_char_is_training_sequence;
@@ -132,29 +136,36 @@ module ccfpga_LTSSM_logic #(
 
    reg  [DATA_WIDTH-1:0] rxdata_reg;
    reg  [DATA_BYTES-1:0] rxdatak_reg;
-
-   // Inversion Detection
+//-------------------------------------------------------------------------------------------------------------------------------
+// Inversion Detection
    wire                  detect_inversion_en = fsm_state == 5'b00010; // Enable in POLLING_ACTIVE
    wire                  inversion_detected;
-
-   // Assignments
+//-------------------------------------------------------------------------------------------------------------------------------
+// Assignments
    wire idle_state = fsm_state == 5'b01001 || fsm_state == 5'b10101; // CONFIG_IDLE or RECOVERY.IDLE
-   assign s_rx_OS_rst   = !idle_state ? s_rx_rst : 1'b1;
-   assign s_rx_IDLE_rst = idle_state ? s_rx_rst : 1'b1;
+   assign s_rx_OS_rst   = !idle_state ? s_rx_rst : 1'b1;             // Rx OS counting when not in IDLE state
+   assign s_rx_IDLE_rst = idle_state  ? s_rx_rst : 1'b1;             // Rx IDLE counting when in IDLE state
 
-   assign s_tx_OS_flag_rst   = !idle_state ? s_tx_flag_rst : 1'b1;
-   assign s_tx_IDLE_flag_rst = idle_state ? s_tx_flag_rst : 1'b1;
+   assign s_tx_OS_flag_rst   = !idle_state ? s_tx_flag_rst : 1'b1;   // Tx OS counting when not in IDLE state
+   assign s_tx_IDLE_flag_rst = idle_state ? s_tx_flag_rst : 1'b1;    // Tx IDLE counting when in IDLE state
+   assign o_PowerDown = fsm_state == 5'b00000 ? 2'b10 : fsm_state == 5'b00001 ? 2'b10 : 2'b00; // Power Down signal to SerDes
+   assign o_LinkUp = fsm_state == 5'b01010 ? 1'b1 : fsm_state == 5'b01001 ? 1'b1 : 1'b0;       // Link Up enabled in L0 or CONFIG_IDLE
+   assign s_rx_flag = ((s_rx_flag_OS && !idle_state) || (s_rx_flag_IDLE && idle_state));       // Rx flag
+   assign s_tx_flag = (s_tx_flag_OS && !idle_state) || (s_tx_flag_IDLE && idle_state);         // Tx flag
+   // Rx reset when:
+   // - Link number detection in CONFIG_LINKWIDTH_START_LINKNUM state (substate of CONFIG_LINKWIDTH_START, waiting for link number)
+   // - Lane number detection in CONFIG_LINKWIDTH_ACCEPT_LANENUM state (substate of CONFIG_LINKWIDTH_ACCEPT, waiting for lane number)
+   // - Rx flag reset in other states
+   // - Detection and Ordered Sets counting is only enabled when i_RxValid is high
+   assign s_rx_rst  = ((fsm_state == 5'b10010) ? s_link_detected_rst :
+                       (fsm_state == 5'b10011) ? s_lane_detected_rst : s_rx_flag_rst) || ~i_RxValid;
 
-   assign o_PowerDown = fsm_state == 5'b00000 ? 2'b10 : fsm_state == 5'b00001 ? 2'b10 : 2'b00; // Power Down for DETECT
-   assign o_LinkUp = fsm_state == 5'b01010 ? 1'b1 : fsm_state == 5'b01001 ? 1'b1 : 1'b0; // Link Up for L0 or CONFIG_IDLE
-   assign s_rx_flag = ((s_rx_flag_OS && !idle_state) || (s_rx_flag_IDLE && idle_state));
-   assign s_tx_flag = (s_tx_flag_OS && !idle_state) || (s_tx_flag_IDLE && idle_state);
-   assign s_rx_rst  = ((fsm_state == 5'b10010) ? s_link_detected_rst : (fsm_state == 5'b10011) ? s_lane_detected_rst : s_rx_flag_rst) || ~i_RxValid;
-
-   // Rx
+   // L0 enabled in L0 state
    assign L0_enabled   = fsm_state == 5'b01010 ? 1'b1 : 1'b0;
+   // Invert Rx polarity
    assign o_RxPolarity = inversion_detected;
-
+//-------------------------------------------------------------------------------------------------------------------------------
+   // Count number of received Ordered Sets/IDLE data at each state
    assign rx_max_count = fsm_state == 5'b00010 ? 4'b1000 :
                          fsm_state == 5'b00011 ? 4'b1000 :
                          fsm_state == 5'b00100 ? 4'b0010 :
@@ -168,7 +179,7 @@ module ccfpga_LTSSM_logic #(
                          fsm_state == 5'b01011 ? 4'b1000 :
                          fsm_state == 5'b10100 ? 4'b1000 :
                          fsm_state == 5'b10101 ? 4'b1000 : 4'b1111;
-
+   // TS1 Ordered Set pattern enable
    assign TS1_pattern_en = fsm_state == 5'b00010 ? 1'b1 :
                            fsm_state == 5'b00011 ? 1'b0 :
                            fsm_state == 5'b00100 ? 1'b1 :
@@ -182,7 +193,7 @@ module ccfpga_LTSSM_logic #(
                            fsm_state == 5'b01011 ? 1'b1 :
                            fsm_state == 5'b10100 ? 1'b0 :
                            fsm_state == 5'b10101 ? 1'b0 : 1'b0;
-
+   // TS2 Ordered Set pattern enable
    assign TS2_pattern_en = fsm_state == 5'b00010 ? 1'b1 :
                            fsm_state == 5'b00011 ? 1'b1 :
                            fsm_state == 5'b00100 ? 1'b0 :
@@ -196,13 +207,12 @@ module ccfpga_LTSSM_logic #(
                            fsm_state == 5'b01011 ? 1'b1 :
                            fsm_state == 5'b10100 ? 1'b1 :
                            fsm_state == 5'b10101 ? 1'b0 : 1'b0;
-
-   // Tx
+   // Count number of transmitted Ordered Sets at each state
    assign tx_max_count   = fsm_state == 5'b00011 ? 5'b10000 :
                            fsm_state == 5'b01000 ? 5'b10000 :
                            fsm_state == 5'b01001 ? 5'b10000 :
                            fsm_state == 5'b10100 ? 5'b10000 : 5'b11111;
-
+   // Type of Ordered Set to be sent at each state/ 0:TS1, 1:TS2
    assign OS_type        = fsm_state == 5'b00010 ? 1'b0 :
                            fsm_state == 5'b00011 ? 1'b1 :
                            fsm_state == 5'b00100 ? 1'b0 :
@@ -212,8 +222,7 @@ module ccfpga_LTSSM_logic #(
                            fsm_state == 5'b01000 ? 1'b1 :
                            fsm_state == 5'b01011 ? 1'b0 :
                            fsm_state == 5'b10100 ? 1'b1 : 1'b0;
-
-   // Timeout
+   // Max count for timeout at each state
    assign clk_max_count = fsm_state == 5'b00000 ? 12*1000000 / CYCLE_TIME : //12ms
                           fsm_state == 5'b00010 ? 24*1000000 / CYCLE_TIME : //24ms
                           fsm_state == 5'b00011 ? 48*1000000 / CYCLE_TIME : //48ms
@@ -225,12 +234,13 @@ module ccfpga_LTSSM_logic #(
                           fsm_state == 5'b01011 ? 24*1000000 / CYCLE_TIME : //24ms
                           fsm_state == 5'b10100 ? 48*1000000 / CYCLE_TIME : //48ms
                           fsm_state == 5'b10101 ?  2*1000000 / CYCLE_TIME : 2*1000000 / CYCLE_TIME; //2ms
-
+//-------------------------------------------------------------------------------------------------------------------------------
+// Timeout enable and timeout signal
    assign s_timeout_clk_en = fsm_state == 5'b00111 ? 1'b0 : 1'b1;
    assign s_timeout_OS_en  = (( fsm_state == 5'b00101 || fsm_state == 5'b00110 ) || fsm_state == 5'b00111) ? 1'b1 : 1'b0;
    assign s_timeout        = ( s_timeout_clk & s_timeout_clk_en) || ( s_timeout_OS & s_timeout_OS_en );
-
-   // ----- LTSSM -----
+//-------------------------------------------------------------------------------------------------------------------------------
+// ----- LTSSM -----
    ccfpga_LTSSM_fsm #(
       .DATA_BYTES     ( DATA_BYTES     )
    ) ccfpga_LTSSM_fsm_inst (
@@ -264,9 +274,8 @@ module ccfpga_LTSSM_logic #(
       .s_link_detected_rst          ( s_link_detected_rst          ),  // Link Detected Reset
       .s_lane_detected_rst          ( s_lane_detected_rst          )   // Lane Detected Reset
    );
-   // ------------------
-
-   // MAC Rx
+//-------------------------------------------------------------------------------------------------------------------------------
+// Receiver of MAC layer
    ccfpga_rx_MAC #(
       .COUNT_WIDTH           ( 4                 ),
       .PATTERN_WIDTH         ( PATTERN_WIDTH     ),
@@ -308,8 +317,8 @@ module ccfpga_LTSSM_logic #(
 
       .rx_data_DLL           ( o_RxData          )
    );
-
-   // Tx Count
+//-------------------------------------------------------------------------------------------------------------------------------
+// Transmitter counter
    ccfpga_tx_count #(
       .COUNT_WIDTH               ( 5                             ),
       .DATA_BYTES                ( DATA_BYTES                    )
@@ -329,8 +338,8 @@ module ccfpga_LTSSM_logic #(
       .IDLE_count_maxed          ( s_tx_flag_IDLE                ),
       .polling_active_count_maxed( s_polling_active_tx_flag      )
    );
-
-   // Clock count (Timeout)
+//-------------------------------------------------------------------------------------------------------------------------------
+// Clock count (Timeout)
    ccfpga_clk_counter # (
       .BIT_WIDTH        ( 21                 )
    ) timeout_counter_inst (
@@ -339,8 +348,68 @@ module ccfpga_LTSSM_logic #(
       .max_count        ( clk_max_count      ),     // Max Count
       .o_flag           ( s_timeout_clk      )      // Output Flag when Count reaches max count
    );
+//-------------------------------------------------------------------------------------------------------------------------------
+// Sending modules
+   // Send OS module
+   ccfpga_send_OS #(
+   .PATTERN_WIDTH   ( PATTERN_WIDTH   ),
+   .DATA_BYTES      ( DATA_BYTES      )
+   ) send_OS_inst (
+   .clk             ( i_PCLK          ),
+   .send_OS_trigger ( send_OS_trigger ),
+   .reset           ( reset           ),
+   .received_Link   ( expected_Link   ),
+   .received_Lane   ( expected_Lane   ),
+   .received_Ctrl   ( expected_Ctrl   ),
+   .OS_type         ( OS_type         ), // 0:TS1, 1:TS2
 
-   // Set detected Link and Lane number
+   .txdata          ( txdata_OS       ),
+   .txdatak         ( txdatak_OS      ),
+   .OS_sent         ( OS_sent         ),
+   .sending_OS      ( sending_OS      )
+   );
+   // Send IDLE module
+   ccfpga_send_IDLE #(
+   .IDLE_WIDTH        ( 8                 ),
+   .DATA_WIDTH        ( DATA_WIDTH        )
+   ) send_IDLE_inst (
+   .clk               ( i_PCLK            ),
+   .send_IDLE_trigger ( send_IDLE_trigger ),
+   .reset             ( reset             ),
+
+   .txdata            ( txdata_IDLE       ),
+   .txdatak           ( txdatak_IDLE      ),
+   .IDLE_sent         ( IDLE_sent         )
+   );
+   // Send Data
+   ccfpga_send_data #(
+   .DATA_BYTES      ( DATA_BYTES   )
+   ) send_data_inst (
+   .clk             ( i_PCLK       ),
+   .reset           ( reset        ),
+   .txdata_DLL      ( i_TxData     ),
+
+   .txdata          ( txdata_DLL   ),
+   .txdatak         ( txdatak_DLL  ),
+   .sending_data    ( sending_data )
+   );
+   // SKP Generator
+   ccfpga_SKP_generator #(
+   .SKP_WIDTH       ( 32                ),
+   .DATA_BYTES      ( DATA_BYTES        )
+   )  SKP_generator_inst (
+   .clk             ( i_PCLK            ),
+   .reset           ( reset             ),
+   .sending_data    ( sending_data      ),
+   .sending_OS      ( sending_OS        ),
+   .sending_IDLE    ( send_IDLE_trigger ),
+
+   .txdata          ( txdata_SKP        ),
+   .txdatak         ( txdatak_SKP       ),
+   .sending_SKP     ( sending_SKP       )
+   );
+//-------------------------------------------------------------------------------------------------------------------------------
+// Set detected Link/Lane number and control bits based on received Ordered Sets
    always @(posedge i_PCLK or negedge i_Reset_n) begin
       if ( !i_Reset_n ) begin
          expected_Link <= 8'hF7;
@@ -373,70 +442,8 @@ module ccfpga_LTSSM_logic #(
          lane_detected <= 1'b0;
       end
    end
-
-// Send OS module
-   ccfpga_send_OS #(
-   .PATTERN_WIDTH   ( PATTERN_WIDTH   ),
-   .DATA_BYTES      ( DATA_BYTES      )
-   ) send_OS_inst (
-   .clk             ( i_PCLK          ),
-   .send_OS_trigger ( send_OS_trigger ),
-   .reset           ( reset           ),
-   .received_Link   ( expected_Link   ),
-   .received_Lane   ( expected_Lane   ),
-   .received_Ctrl   ( expected_Ctrl   ),
-   .OS_type         ( OS_type         ), // 0:TS1, 1:TS2
-
-   .txdata          ( txdata_OS       ),
-   .txdatak         ( txdatak_OS      ),
-   .OS_sent         ( OS_sent         ),
-   .sending_OS      ( sending_OS      )
-   );
-
-// Send IDLE module
-   ccfpga_send_IDLE #(
-   .IDLE_WIDTH        ( 8                 ),
-   .DATA_WIDTH        ( DATA_WIDTH        )
-   ) send_IDLE_inst (
-   .clk               ( i_PCLK            ),
-   .send_IDLE_trigger ( send_IDLE_trigger ),
-   .reset             ( reset             ),
-
-   .txdata            ( txdata_IDLE       ),
-   .txdatak           ( txdatak_IDLE      ),
-   .IDLE_sent         ( IDLE_sent         )
-   );
-
-// Send Data
-   ccfpga_send_data #(
-   .DATA_BYTES      ( DATA_BYTES   )
-   ) send_data_inst (
-   .clk             ( i_PCLK       ),
-   .reset           ( reset        ),
-   .txdata_DLL      ( i_TxData     ),
-
-   .txdata          ( txdata_DLL   ),
-   .txdatak         ( txdatak_DLL  ),
-   .sending_data    ( sending_data )
-   );
-
-   // SKP Generator
-   ccfpga_SKP_generator #(
-   .SKP_WIDTH       ( 32                ),
-   .DATA_BYTES      ( DATA_BYTES        )
-   )  SKP_generator_inst (
-   .clk             ( i_PCLK            ),
-   .reset           ( reset             ),
-   .sending_data    ( sending_data      ),
-   .sending_OS      ( sending_OS        ),
-   .sending_IDLE    ( send_IDLE_trigger ),
-
-   .txdata          ( txdata_SKP        ),
-   .txdatak         ( txdatak_SKP       ),
-   .sending_SKP     ( sending_SKP       )
-   );
-
-   // Transmitted data multiplexer
+//-------------------------------------------------------------------------------------------------------------------------------
+// Transmitted data multiplexer
    always @(posedge i_PCLK or posedge reset) begin
       if ( reset ) begin
          txdata_reg  <= {DATA_WIDTH{1'b0}};
@@ -458,7 +465,8 @@ module ccfpga_LTSSM_logic #(
          txdatak_reg <= {DATA_BYTES{1'b0}};
       end
    end
-
+//-------------------------------------------------------------------------------------------------------------------------------
+// Scrambler and Descrambler
    // Scrambled output data
    always @(posedge i_PCLK or posedge reset) begin
       if ( reset ) begin
@@ -505,7 +513,7 @@ module ccfpga_LTSSM_logic #(
    .scrambler_en  ( descrambler_en               ),
    .data_in       ( rxdata_reg                   ),
    .data_in_k     ( rxdatak_reg                  ),
-   .data_in_TS    ( rx_char_is_training_sequence ), // TODO: how to know if it is TS?
+   .data_in_TS    ( rx_char_is_training_sequence ),
 
    .data_out      ( unscrambled_data             ),
    .data_out_k    ( unscrambled_data_k           )
@@ -513,10 +521,14 @@ module ccfpga_LTSSM_logic #(
 
    // TODO: Question: if we sending nothing, maybe waiting for data from upper layer
    // should the scrambler_en disabled?
+   // Scrambler enabled when not directed in control bits and sending data/OS/SKP
    //assign scrambler_en = (sending_data | sending_OS | send_IDLE_trigger | sending_SKP) & ~expected_Ctrl[3];
    assign scrambler_en = (sending_data | sending_OS | sending_SKP) & ~expected_Ctrl[3];
+   // Descrambler enabled when not directed in control bits
    assign descrambler_en = ~expected_Ctrl[3];
+   // Training sequence indication for scrambler/descrambler
    assign tx_char_is_training_sequence = sending_OS ? {DATA_BYTES{1'b1}} : {DATA_BYTES{1'b0}};
-   assign rx_char_is_training_sequence = (fsm_state == 5'b01010 | fsm_state == 5'b01001 | fsm_state == 5'b10110) ? {DATA_BYTES{1'b0}} : {DATA_BYTES{1'b1}};
-
+   assign rx_char_is_training_sequence = (fsm_state == 5'b01010 | fsm_state == 5'b01001 | fsm_state == 5'b10110) ?
+                                        {DATA_BYTES{1'b0}} : {DATA_BYTES{1'b1}};
+//-------------------------------------------------------------------------------------------------------------------------------
 endmodule

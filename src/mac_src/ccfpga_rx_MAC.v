@@ -105,41 +105,42 @@ module ccfpga_rx_MAC #(
     wire clear_count_rec_idle;  // Clear recovery idle counter
 
     // Processing received OS
-    wire rx_valid;
-    wire rx_OS;
-    wire rx_OS_inv;
-    wire rx_rec_cfg;
-    wire rx_rec_idl;
-    wire [PATTERN_WIDTH - 1 : 0] TS1_pattern;
-    wire [PATTERN_WIDTH - 1 : 0] TS2_pattern;
-    wire [PATTERN_WIDTH - 1 : 0] TS1_inv;
-    wire [PATTERN_WIDTH - 1 : 0] TS2_inv;
-    wire [PATTERN_WIDTH - 1 : 0] TS1_OS;
-    wire [PATTERN_WIDTH - 1 : 0] TS2_OS;
-    wire [PATTERN_WIDTH - 1 : 0] TS1_OS_inv;
-    wire [PATTERN_WIDTH - 1 : 0] TS2_OS_inv;
-    wire [PATTERN_WIDTH - 1 : 0] TS1_valid;
-    wire [PATTERN_WIDTH - 1 : 0] TS2_valid;
-    wire [PATTERN_WIDTH - 1 : 0] data_OS;
-    wire [PATTERN_WIDTH - 1 : 0] data_valid;
+    wire                         rx_valid;    // received Ordered Set is valid
+    wire                         rx_OS;       // received data is an Ordered Set
+    wire                         rx_OS_inv;   // received Ordered Set is inverted
+    wire                         rx_rec_cfg;  // received Ordered Set with non-matched Link/Lane, used in Recovery.RcvrCfg
+    wire                         rx_rec_idl;  // received recovery idle Ordered Set with PAD-Lane, used in Recovery.Idle
+    wire [PATTERN_WIDTH - 1 : 0] TS1_pattern; // TS1 pattern
+    wire [PATTERN_WIDTH - 1 : 0] TS2_pattern; // TS2 pattern
+    wire [PATTERN_WIDTH - 1 : 0] TS1_inv;     // TS1 inverted pattern
+    wire [PATTERN_WIDTH - 1 : 0] TS2_inv;     // TS2 inverted pattern
+    wire [PATTERN_WIDTH - 1 : 0] TS1_OS;      // TS1 pattern masked for OS detection
+    wire [PATTERN_WIDTH - 1 : 0] TS2_OS;      // TS2 pattern masked for OS detection
+    wire [PATTERN_WIDTH - 1 : 0] TS1_OS_inv;  // TS1 inverted pattern masked for OS detection
+    wire [PATTERN_WIDTH - 1 : 0] TS2_OS_inv;  // TS2 inverted pattern masked for OS detection
+    wire [PATTERN_WIDTH - 1 : 0] TS1_valid;   // TS1 pattern masked for OS validation
+    wire [PATTERN_WIDTH - 1 : 0] TS2_valid;   // TS2 pattern masked for OS validation
+    wire [PATTERN_WIDTH - 1 : 0] data_OS;     // Masked received data for OS detection
+    wire [PATTERN_WIDTH - 1 : 0] data_valid;  // Masked received data for OS validation
 
-    reg   [COUNT_WIDTH - 1 : 0] rx_count_OS;
-    reg                   [3:0] rx_count_IDL;
-    reg                   [1:0] rx_count_timeout;
-    reg                   [3:0] rx_count_rec_cfg;
-    reg                   [1:0] rx_count_rec_idle;
-    reg [PATTERN_WIDTH - 1 : 0] data;
-    reg                         COM_detected;
+    reg    [COUNT_WIDTH - 1 : 0] rx_count_OS;        // Ordered Set count
+    reg                    [3:0] rx_count_IDL;       // Idle count
+    reg                    [1:0] rx_count_timeout;   // Ordered Set count for timeout
+    reg                    [3:0] rx_count_rec_cfg;   // Ordered Set count for Recovery config
+    reg                    [1:0] rx_count_rec_idle;  // Ordered Set count for Recovery idle
+    reg  [PATTERN_WIDTH - 1 : 0] data;               // Received data
+    reg                          COM_detected;       // COM detected flag
 
     // Processing received data
-    wire [DATA_BYTES - 1 : 0] char_is_K;
-    wire [DATA_BYTES - 1 : 0] char_is_END;
-    wire K_detected;
-    wire END_detected;
+    wire    [DATA_BYTES - 1 : 0] char_is_K;       // STP or SDP detected in received data
+    wire    [DATA_BYTES - 1 : 0] char_is_END;     // END detected in received data
+    wire                         K_detected;      // STP or SDP detected flag
+    wire                         END_detected;    // END detected flag
 
-    reg receiving_data;
+    reg                          receiving_data;  // Data receiving flag for DLL (needed??)
 
-    // Shift registers to store received data for Ordered Set assembly
+//--------------------------------------------------------------------------------
+// Shift registers to store received data for Ordered Set assembly
     reg [DATA_WIDTH - 1 : 0] rx_data_shift [NUMBER_OF_STEPS : 0];
     integer i;
 
@@ -149,7 +150,21 @@ module ccfpga_rx_MAC #(
             rx_data_shift[i] <= rx_data_shift[i - 1];
         end
     end
+//--------------------------------------------------------------------------------
+// IDLE detection signal
+    always @ (posedge clk or posedge IDLE_reset_flag) begin
+        if ( IDLE_reset_flag )
+            IDLE_detected <= 1'b0;
+        else if ( inc_count_IDL ) // Idle pattern detected
+            IDLE_detected <= 1'b1;
+        else
+            IDLE_detected <= 1'b0;
+    end
 
+//--------------------------------------------------------------------------------
+// Counting logic
+// inc_count = 1 if correctly received
+// clear_count = 1 if incorrectly received
     // Pattern counting/ count_maxed is hold until reset or clear_count
     always @ (posedge clk or posedge OS_reset_flag) begin
         if ( OS_reset_flag ) begin
@@ -184,16 +199,6 @@ module ccfpga_rx_MAC #(
                 IDLE_count_maxed <= 1'b0;
             end
         end
-    end
-
-    // IDLE detected signal
-    always @ (posedge clk or posedge IDLE_reset_flag) begin
-        if ( IDLE_reset_flag )
-            IDLE_detected <= 1'b0;
-        else if ( inc_count_IDL )
-            IDLE_detected <= 1'b1;
-        else
-            IDLE_detected <= 1'b0;
     end
 
     // Timeout counting/ count_maxed is hold until reset or clear_count
@@ -248,14 +253,11 @@ module ccfpga_rx_MAC #(
             rec_idle_count_maxed  <= 1'b0;
         end
     end
-
-    // Ordered Set assembly
-    // COM detected, start assembling the Ordered Set
-    // New COM arrival before completing the Ordered Set resets the assembly
-    // Completion of Ordered Set assembly resets the assembly
-    // inc_count = 1 if Ordered Set correctly received
-    // clear_count = 1 if Ordered Set incorrectly received
-
+//--------------------------------------------------------------------------------
+// Ordered Set assembly
+// COM detected, start assembling the Ordered Set
+// New COM arrival before completing the Ordered Set resets the assembly
+// Completion of Ordered Set assembly resets the assembly
     generate
         if ( DATA_WIDTH == 64 ) begin
             always @ (posedge clk or posedge OS_reset_flag) begin
@@ -356,7 +358,7 @@ module ccfpga_rx_MAC #(
                         COM_detected    <= 1'b0;
                         data            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
-                        COM_detected <= 1'b1;
+                        COM_detected    <= 1'b1;
                         data[31:0]      <= rx_data_shift[NUMBER_OF_STEPS];
                         data[63:32]     <= rx_data_shift[NUMBER_OF_STEPS - 1];
                         data[95:64]     <= rx_data_shift[NUMBER_OF_STEPS - 2];
@@ -367,7 +369,7 @@ module ccfpga_rx_MAC #(
                         COM_detected    <= 1'b0;
                         data            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
-                        COM_detected <= 1'b1;
+                        COM_detected    <= 1'b1;
                         data[23:0]      <= rx_data_shift[NUMBER_OF_STEPS][31:8];
                         data[55:24]     <= rx_data_shift[NUMBER_OF_STEPS - 1][31:0];
                         data[87:56]     <= rx_data_shift[NUMBER_OF_STEPS - 2][31:0];
@@ -391,12 +393,94 @@ module ccfpga_rx_MAC #(
                         COM_detected    <= 1'b0;
                         data            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
-                        COM_detected <= 1'b1;
-                        data[7:0]      <= rx_data_shift[NUMBER_OF_STEPS][31:24];
-                        data[39:8]     <= rx_data_shift[NUMBER_OF_STEPS - 1][31:0];
-                        data[71:40]    <= rx_data_shift[NUMBER_OF_STEPS - 2][31:0];
-                        data[103:72]   <= rx_data_shift[NUMBER_OF_STEPS - 3][31:0];
-                        data[127:104]  <= rx_data_shift[NUMBER_OF_STEPS - 4][23:0];
+                        COM_detected    <= 1'b1;
+                        data[7:0]       <= rx_data_shift[NUMBER_OF_STEPS][31:24];
+                        data[39:8]      <= rx_data_shift[NUMBER_OF_STEPS - 1][31:0];
+                        data[71:40]     <= rx_data_shift[NUMBER_OF_STEPS - 2][31:0];
+                        data[103:72]    <= rx_data_shift[NUMBER_OF_STEPS - 3][31:0];
+                        data[127:104]   <= rx_data_shift[NUMBER_OF_STEPS - 4][23:0];
+                    end
+                end else begin
+                    COM_detected <= 1'b0;
+                    data <= {PATTERN_WIDTH{1'b0}};
+                end
+            end
+        end else if ( DATA_WIDTH == 16 ) begin
+            always @ (posedge clk or posedge OS_reset_flag) begin
+                if ( OS_reset_flag ) begin
+                    COM_detected <= 1'b0;
+                    data <= {PATTERN_WIDTH{1'b0}};
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM ) begin
+                    if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == SKP ) begin
+                        COM_detected    <= 1'b0;
+                        data            <= {PATTERN_WIDTH{1'b0}};
+                    end else begin
+                        COM_detected    <= 1'b1;
+                        data[15:0]      <= rx_data_shift[NUMBER_OF_STEPS];
+                        data[31:16]     <= rx_data_shift[NUMBER_OF_STEPS - 1];
+                        data[47:32]     <= rx_data_shift[NUMBER_OF_STEPS - 2];
+                        data[63:48]     <= rx_data_shift[NUMBER_OF_STEPS - 3];
+                        data[79:64]     <= rx_data_shift[NUMBER_OF_STEPS - 4];
+                        data[95:80]     <= rx_data_shift[NUMBER_OF_STEPS - 5];
+                        data[111:96]    <= rx_data_shift[NUMBER_OF_STEPS - 6];
+                        data[127:112]   <= rx_data_shift[NUMBER_OF_STEPS - 7];
+                    end
+                end else if (rx_data_shift[NUMBER_OF_STEPS][15:8] == COM ) begin
+                    if ( rx_data_shift[NUMBER_OF_STEPS-1][7:0] == SKP ) begin
+                        COM_detected    <= 1'b0;
+                        data            <= {PATTERN_WIDTH{1'b0}};
+                    end else begin
+                        COM_detected    <= 1'b1;
+                        data[7:0]       <= rx_data_shift[NUMBER_OF_STEPS][15:8];
+                        data[23:8]      <= rx_data_shift[NUMBER_OF_STEPS - 1][15:0];
+                        data[39:24]     <= rx_data_shift[NUMBER_OF_STEPS - 2][15:0];
+                        data[55:40]     <= rx_data_shift[NUMBER_OF_STEPS - 3][15:0];
+                        data[71:56]     <= rx_data_shift[NUMBER_OF_STEPS - 4][15:0];
+                        data[87:72]     <= rx_data_shift[NUMBER_OF_STEPS - 5][15:0];
+                        data[103:88]    <= rx_data_shift[NUMBER_OF_STEPS - 6][15:0];
+                        data[119:104]   <= rx_data_shift[NUMBER_OF_STEPS - 7][15:0];
+                        data[127:120]   <= rx_data_shift[NUMBER_OF_STEPS - 8][7:0];
+                    end
+                end else begin
+                    COM_detected <= 1'b0;
+                    data <= {PATTERN_WIDTH{1'b0}};
+                end
+            end
+        end else begin // 8-Bit data width
+            always @ (posedge clk or posedge OS_reset_flag) begin
+                if ( OS_reset_flag ) begin
+                    COM_detected <= 1'b0;
+                    data <= {PATTERN_WIDTH{1'b0}};
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM ) begin
+                    if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == SKP ) begin
+                        COM_detected    <= 1'b0;
+                        data            <= {PATTERN_WIDTH{1'b0}};
+                    end else begin
+                        COM_detected    <= 1'b1;
+                        data[15:0]      <= rx_data_shift[NUMBER_OF_STEPS];
+                        data[31:16]     <= rx_data_shift[NUMBER_OF_STEPS - 1];
+                        data[47:32]     <= rx_data_shift[NUMBER_OF_STEPS - 2];
+                        data[63:48]     <= rx_data_shift[NUMBER_OF_STEPS - 3];
+                        data[79:64]     <= rx_data_shift[NUMBER_OF_STEPS - 4];
+                        data[95:80]     <= rx_data_shift[NUMBER_OF_STEPS - 5];
+                        data[111:96]    <= rx_data_shift[NUMBER_OF_STEPS - 6];
+                        data[127:112]   <= rx_data_shift[NUMBER_OF_STEPS - 7];
+                    end
+                end else if (rx_data_shift[NUMBER_OF_STEPS][15:8] == COM ) begin
+                    if ( rx_data_shift[NUMBER_OF_STEPS-1][7:0] == SKP ) begin
+                        COM_detected    <= 1'b0;
+                        data            <= {PATTERN_WIDTH{1'b0}};
+                    end else begin
+                        COM_detected    <= 1'b1;
+                        data[7:0]       <= rx_data_shift[NUMBER_OF_STEPS][15:8];
+                        data[23:8]      <= rx_data_shift[NUMBER_OF_STEPS - 1][15:0];
+                        data[39:24]     <= rx_data_shift[NUMBER_OF_STEPS - 2][15:0];
+                        data[55:40]     <= rx_data_shift[NUMBER_OF_STEPS - 3][15:0];
+                        data[71:56]     <= rx_data_shift[NUMBER_OF_STEPS - 4][15:0];
+                        data[87:72]     <= rx_data_shift[NUMBER_OF_STEPS - 5][15:0];
+                        data[103:88]    <= rx_data_shift[NUMBER_OF_STEPS - 6][15:0];
+                        data[119:104]   <= rx_data_shift[NUMBER_OF_STEPS - 7][15:0];
+                        data[127:120]   <= rx_data_shift[NUMBER_OF_STEPS - 8][7:0];
                     end
                 end else begin
                     COM_detected <= 1'b0;
@@ -405,10 +489,10 @@ module ccfpga_rx_MAC #(
             end
         end
     endgenerate
-
-    // Forward data to DLL when STP or SDP detected
-    // Stop when END detected
-    // No alignment support for now - the whole datapath is forwarded
+//--------------------------------------------------------------------------------
+// Forwarding data to DLL when STP or SDP detected
+// Stop when END detected
+// No alignment support for now - the whole datapath is forwarded
     always @ (posedge clk or negedge L0_enabled) begin
         if (L0_enabled == 1'b0) begin
             receiving_data <= 1'b0;
@@ -434,8 +518,9 @@ module ccfpga_rx_MAC #(
             end
         end
     end
-
-    // Ordered Set received validation
+//--------------------------------------------------------------------------------
+// Processing received Ordered Sets
+    // Ordered Set validation
     // OS_valid = 1 for one clock cycle when an Ordered Set is correctly received
     always @ (posedge clk or posedge OS_reset_flag) begin
         if ( OS_reset_flag ) begin
@@ -465,6 +550,7 @@ module ccfpga_rx_MAC #(
     end
 
     // Ordered Set received detection
+    // Extract Link, Lane and Ctrl from the received Ordered Set
     // OS_detected = 1 for one clock cycle when an Ordered Set received
     always @ (posedge clk or posedge OS_reset_flag) begin
         if ( OS_reset_flag ) begin
@@ -498,7 +584,8 @@ module ccfpga_rx_MAC #(
             inversion_detected <= inversion_detected;
         end
     end
-
+//--------------------------------------------------------------------------------
+// Combinational logic for Ordered Set processing
     assign TS1_pattern = {{10{ID1}}, expected_Ctrl, 8'h02, 8'h00, expected_Lane, expected_Link, COM};
     assign TS2_pattern = {{10{ID2}}, expected_Ctrl, 8'h02, 8'h00, expected_Lane, expected_Link, COM};
     assign TS1_inv     = {{10{ID1_inv}}, expected_Ctrl, 8'h02, 8'h00, expected_Lane, expected_Link, COM};
@@ -521,7 +608,8 @@ module ccfpga_rx_MAC #(
     assign rx_valid   = (TS1_pattern_en && (data_valid == TS1_valid)) || (TS2_pattern_en && (data_valid == TS2_valid));
     assign rx_rec_cfg = (data_OS == TS1_OS) && ((data[23:16] != expected_Lane) || (data[15:8] != expected_Link)); // TS1 with non-matched Link/Lane
     assign rx_rec_idl = (data_OS == TS1_OS) && (data[23:16] == PAD); // TS1 with PAD-Lane
-
+//--------------------------------------------------------------------------------
+// Combinational logic for other counting
     // IDLE counting signals
     //assign inc_count_IDL = ( rx_data_shift[NUMBER_OF_STEPS] == { DATA_WIDTH{1'b0} } );
     assign inc_count_IDL   = COM_detected == 1'b0;
@@ -539,8 +627,8 @@ module ccfpga_rx_MAC #(
     // Recovery.Idle counting signals
     assign inc_count_rec_idle   = (COM_detected == 1'b1) && rx_rec_idl;
     assign clear_count_rec_idle = (COM_detected == 1'b1) && !rx_rec_idl && (rx_count_rec_idle != REC_IDLE_MAX_COUNT);
-
-    // Detect special characters (STP, SDP or END) in all symbol positions
+//--------------------------------------------------------------------------------
+// Detection of special characters (STP, SDP or END) in all symbol positions
     generate
         genvar j;
         for (j = 0; j < DATA_BYTES; j = j + 1) begin
@@ -549,7 +637,9 @@ module ccfpga_rx_MAC #(
         end
     endgenerate
 
+    // Detection flags
     assign K_detected   = |char_is_K;
     assign END_detected = |char_is_END;
+//--------------------------------------------------------------------------------
 
 endmodule

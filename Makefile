@@ -29,7 +29,7 @@ net/$(TOP)_synth.json: $(VLOG_SRC)
 	$(YOSYS) -l log/synth.log -p 'read_verilog -sv $^; synth_gatemate -nomx8 -top $(TOP) -luttree $(YSFLAGS) -vlog net/$(TOP)_synth.v -json net/$(TOP)_synth.json'
 
 $(TOP).txt: net/$(TOP)_synth.json src/pipe_src/$(TOP).ccf
-	$(NEXTPNR) --device CCGM1A1 --json net/$(TOP)_synth.json --vopt ccf=src/pipe_src/$(TOP).ccf $(NEXTPNRFLAGS) --vopt out=$(TOP).txt --router router2 -luttree
+	$(NEXTPNR) --device CCGM1A1 --json net/$(TOP)_synth.json --vopt ccf=src/pipe_src/$(TOP).ccf $(NEXTPNRFLAGS) --vopt out=$(TOP).txt --router router2
 
 $(TOP).bit: $(TOP).txt
 	$(PACK) $(TOP).txt $(TOP).bit

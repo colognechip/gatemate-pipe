@@ -21,6 +21,8 @@ module ccfpga_scrambler_data #(
     genvar i;
     generate
         for(i = 0; i < DATA_BYTES; i = i + 1) begin
+            // Scramble if not a character in training sequence or K character
+            // and scrambler is enabled
             assign scrambler_enabled[i] = ~(data_in_TS[i] | data_in_k[i] | ~(scrambler_en));
             // Scrambling with XOR operation
             assign scrambled_data[8*i +: 8] = data_in[8*i +: 8] ^ (lfsr_value[8*i +: 8] & {8{scrambler_enabled[i]}});
