@@ -165,7 +165,7 @@ module ccfpga_rx_MAC #(
 // Counting logic
 // inc_count = 1 if correctly received
 // clear_count = 1 if incorrectly received
-    // Pattern counting/ count_maxed is hold until reset or clear_count
+    // Ordered Set Pattern counting/ count_maxed is hold until reset or clear_count
     always @ (posedge clk or posedge OS_reset_flag) begin
         if ( OS_reset_flag ) begin
             rx_count_OS <= {COUNT_WIDTH{1'b0}};
@@ -201,7 +201,8 @@ module ccfpga_rx_MAC #(
         end
     end
 
-    // Timeout counting/ count_maxed is hold until reset or clear_count
+    // Ordered Set Timeout counting/ count_maxed is hold until reset or clear_count
+    // Receives Ordered Sets with PAD-Link/Lane can lead to timeout in some states
     always @ (posedge clk or posedge timeout_reset_flag) begin
         if ( timeout_reset_flag ) begin
             rx_count_timeout <= 2'b00;
@@ -220,7 +221,8 @@ module ccfpga_rx_MAC #(
         end
     end
 
-    // TS1 with non-matched Link/Lane in Recovery.RcvrCfg counting/ count_maxed is hold until reset or clear_count
+    // TS1 with non-matched Link/Lane in Recovery.RcvrCfg counting
+    // count_maxed is hold until reset or clear_count
     always @ (posedge clk or posedge rec_cfg_reset_flag) begin
         if ( rec_cfg_reset_flag ) begin
             rx_count_rec_cfg    <= 4'b0;
@@ -237,7 +239,8 @@ module ccfpga_rx_MAC #(
         end
     end
 
-    // TS1 with PAD-Lane in Recovery.Idle counting/ count_maxed is hold until reset or clear_count
+    // TS1 with PAD-Lane in Recovery.Idle counting
+    // count_maxed is hold until reset or clear_count
     always @ (posedge clk or posedge rec_idle_reset_flag) begin
         if ( rec_idle_reset_flag ) begin
             rx_count_rec_idle     <= 2'b0;
@@ -493,7 +496,7 @@ module ccfpga_rx_MAC #(
 // Forwarding data to DLL when STP or SDP detected
 // Stop when END detected
 // No alignment support for now - the whole datapath is forwarded
-    always @ (posedge clk or negedge L0_enabled) begin
+    always @ (posedge clk) begin
         if (L0_enabled == 1'b0) begin
             receiving_data <= 1'b0;
             rx_data_DLL    <= { DATA_WIDTH{1'b0} };
@@ -501,15 +504,15 @@ module ccfpga_rx_MAC #(
         end else begin
             if (K_detected) begin
                 receiving_data <= 1'b1;
-                rx_data_DLL    <= rx_data;
+                rx_data_DLL    <= rx_data_shift[NUMBER_OF_STEPS];
                 //rx_data_k_DLL <= { DATA_BYTES{1'b0} };
             end else if (END_detected) begin
                 receiving_data <= 1'b0;
-                rx_data_DLL    <= rx_data;
+                rx_data_DLL    <= rx_data_shift[NUMBER_OF_STEPS];
                 //rx_data_k_DLL <= { DATA_BYTES{1'b0} };
             end else if (receiving_data == 1'b1)begin
                 receiving_data <= 1'b1;
-                rx_data_DLL    <= rx_data;
+                rx_data_DLL    <= rx_data_shift[NUMBER_OF_STEPS];
                 //rx_data_k_DLL <= { DATA_BYTES{1'b0} };
             end else begin
                 receiving_data <= 1'b0;
@@ -518,6 +521,19 @@ module ccfpga_rx_MAC #(
             end
         end
     end
+
+    // Detection of special characters (STP, SDP or END) in all symbol positions
+    generate
+        genvar j;
+        for (j = 0; j < DATA_BYTES; j = j + 1) begin
+            assign char_is_K[j]   = (rx_data_shift[NUMBER_OF_STEPS][8*j +: 8] == STP) || (rx_data_shift[NUMBER_OF_STEPS][8*j +: 8] == SDP);
+            assign char_is_END[j] = (rx_data_shift[NUMBER_OF_STEPS][8*j +: 8] == _END);
+        end
+    endgenerate
+
+    // Detection flags
+    assign K_detected   = |char_is_K;
+    assign END_detected = |char_is_END;
 //--------------------------------------------------------------------------------
 // Processing received Ordered Sets
     // Ordered Set validation
@@ -561,12 +577,12 @@ module ccfpga_rx_MAC #(
         end
         else begin
             if ( (COM_detected == 1'b1) && rx_OS ) begin
-                OS_detected <= 1'b1;
+                OS_detected   <= 1'b1;
                 detected_Link <= data[15:8];
                 detected_Lane <= data[23:16];
                 detected_Ctrl <= data[47:40];
             end else begin
-                OS_detected <= 1'b0;
+                OS_detected   <= 1'b0;
                 detected_Link <= 8'h00;
                 detected_Lane <= 8'h00;
                 detected_Ctrl <= 8'h00;
@@ -628,18 +644,4 @@ module ccfpga_rx_MAC #(
     assign inc_count_rec_idle   = (COM_detected == 1'b1) && rx_rec_idl;
     assign clear_count_rec_idle = (COM_detected == 1'b1) && !rx_rec_idl && (rx_count_rec_idle != REC_IDLE_MAX_COUNT);
 //--------------------------------------------------------------------------------
-// Detection of special characters (STP, SDP or END) in all symbol positions
-    generate
-        genvar j;
-        for (j = 0; j < DATA_BYTES; j = j + 1) begin
-            assign char_is_K[j]   = (rx_data_DLL[8*j +: 8] == STP) || (rx_data_DLL[8*j +: 8] == SDP);
-            assign char_is_END[j] = (rx_data_DLL[8*j +: 8] == _END);
-        end
-    endgenerate
-
-    // Detection flags
-    assign K_detected   = |char_is_K;
-    assign END_detected = |char_is_END;
-//--------------------------------------------------------------------------------
-
 endmodule
