@@ -52,13 +52,13 @@ module ccfpga_LTSSM_logic #(
    wire       s_rx_OS_rst;              // Receiver OS flag Reset
    wire       s_rx_IDLE_rst;            // Receiver IDLE flag Reset
    wire       s_rx_flag_IDLE;           // Max count for received IDLE reached
-   reg  [7:0] expected_Link;            // Expected link number in Ordered Set
-   reg  [7:0] expected_Lane;            // Expected lane number in Ordered Set
-   reg  [7:0] expected_Ctrl;            // Expected control
+   wire [7:0] expected_Link;            // Expected link number in Ordered Set
+   wire [7:0] expected_Lane;            // Expected lane number in Ordered Set
+   wire [7:0] expected_Ctrl;            // Expected control
    wire       s_link_detected_rst;      // Link Detected Reset from FSM
    wire       s_lane_detected_rst;      // Lane Detected Reset from FSM
-   reg        link_detected;            // Link number detected
-   reg        lane_detected;            // Lane number detected
+   wire       link_detected;            // Link number detected
+   wire       lane_detected;            // Lane number detected
    wire [3:0] rx_max_count;             // Max count for received Ordered Set
    wire       TS1_pattern_en;           // Enable TS1 pattern
    wire       TS2_pattern_en;           // Enable TS2 pattern
@@ -109,37 +109,16 @@ module ccfpga_LTSSM_logic #(
    wire       sending_SKP;         // Sending SKP flag
 //-------------------------------------------------------------------------------------------------------------------------------
 // Transmitted data signals
-   wire [DATA_WIDTH-1:0] txdata_OS;
-   wire [DATA_BYTES-1:0] txdatak_OS;
-   wire [DATA_WIDTH-1:0] txdata_IDLE;
-   wire [DATA_BYTES-1:0] txdatak_IDLE;
-   wire [DATA_WIDTH-1:0] txdata_DLL;
-   wire [DATA_BYTES-1:0] txdatak_DLL;
-   wire [DATA_WIDTH-1:0] txdata_SKP;
-   wire [DATA_BYTES-1:0] txdatak_SKP;
-//-------------------------------------------------------------------------------------------------------------------------------
-// Scrambler and descrambler signals
-   // Scrambler
-   wire                  scrambler_en;
-   wire [DATA_BYTES-1:0] tx_char_is_training_sequence;
-   wire [DATA_WIDTH-1:0] scrambled_data;
-   wire [DATA_BYTES-1:0] scrambled_data_k;
-
-   reg  [DATA_WIDTH-1:0] txdata_reg;
-   reg  [DATA_BYTES-1:0] txdatak_reg;
-
-   // Descrambler
-   wire                  descrambler_en;
-   wire [DATA_BYTES-1:0] rx_char_is_training_sequence;
-   wire [DATA_WIDTH-1:0] unscrambled_data;
-   wire [DATA_BYTES-1:0] unscrambled_data_k;
-
-   reg  [DATA_WIDTH-1:0] rxdata_reg;
-   reg  [DATA_BYTES-1:0] rxdatak_reg;
+   wire [DATA_WIDTH-1:0] txdata_reg;
+   wire [DATA_BYTES-1:0] txdatak_reg;
 //-------------------------------------------------------------------------------------------------------------------------------
 // Inversion Detection
    wire                  detect_inversion_en = fsm_state == 5'b00010; // Enable in POLLING_ACTIVE
    wire                  inversion_detected;
+//-------------------------------------------------------------------------------------------------------------------------------
+// Descrambler signals
+   wire [DATA_WIDTH-1:0] descrambled_data;
+   wire [DATA_BYTES-1:0] descrambled_data_k;
 //-------------------------------------------------------------------------------------------------------------------------------
 // Assignments
    wire idle_state = fsm_state == 5'b01001 || fsm_state == 5'b10101; // CONFIG_IDLE or RECOVERY.IDLE
@@ -275,71 +254,89 @@ module ccfpga_LTSSM_logic #(
       .s_lane_detected_rst          ( s_lane_detected_rst          )   // Lane Detected Reset
    );
 //-------------------------------------------------------------------------------------------------------------------------------
-// Receiver of MAC layer
+// ----- Receiver of MAC layer -----
    ccfpga_rx_MAC #(
-      .COUNT_WIDTH           ( 4                 ),
-      .PATTERN_WIDTH         ( PATTERN_WIDTH     ),
-      .DATA_BYTES            ( DATA_BYTES        )
+      .COUNT_WIDTH           ( 4                       ),
+      .PATTERN_WIDTH         ( PATTERN_WIDTH           ),
+      .DATA_BYTES            ( DATA_BYTES              )
    ) rx_MAC_inst (
-      .clk                   ( i_PCLK            ),
-      .reset                 ( reset             ),
-      .OS_reset_flag         ( s_rx_OS_rst       ),
-      .IDLE_reset_flag       ( s_rx_IDLE_rst     ),
-      .timeout_reset_flag    ( s_OS_timeout_rst  ),
+      .clk                   ( i_PCLK                  ),
+      .reset                 ( reset                   ),
+      .fsm_state             ( fsm_state               ),
+
+      .rx_data               ( descrambled_data        ),
+
+      .OS_reset_flag         ( s_rx_OS_rst             ),
+      .IDLE_reset_flag       ( s_rx_IDLE_rst           ),
+      .timeout_reset_flag    ( s_OS_timeout_rst        ),
       .rec_cfg_reset_flag    ( s_recovery_cfg_rx_flag  ),
       .rec_idle_reset_flag   ( s_recovery_idle_rx_flag ),
+      .TS1_pattern_en        ( TS1_pattern_en          ),
+      .TS2_pattern_en        ( TS2_pattern_en          ),
+      .max_count             ( rx_max_count            ),
+      .L0_enabled            ( L0_enabled              ),
 
-      .rx_data               ( unscrambled_data  ),
-      .expected_Link         ( expected_Link     ),
-      .expected_Lane         ( expected_Lane     ),
-      .expected_Ctrl         ( expected_Ctrl     ),
-      .max_count             ( rx_max_count      ),
-      .TS1_pattern_en        ( TS1_pattern_en    ),
-      .TS2_pattern_en        ( TS2_pattern_en    ),
-
-      .L0_enabled            ( L0_enabled        ),
-
-      .timeout_flag          ( s_timeout_OS      ),
-
-      .OS_valid              ( OS_valid          ),
-      .OS_detected           ( OS_detected       ),
-      .OS_count_maxed        ( s_rx_flag_OS      ),
-      .inversion_detected    ( inversion_detected),
-      .detected_Link         ( Link_number       ),
-      .detected_Lane         ( Lane_number       ),
-      .detected_Ctrl         ( Control_bits      ),
-
-      .IDLE_detected         ( IDLE_detected     ),
-      .IDLE_count_maxed      ( s_rx_flag_IDLE    ),
-      .rec_cfg_count_maxed   ( s_recovery_cfg_rx_flag  ),
+      .OS_valid              ( OS_valid                ),
+      .OS_detected           ( OS_detected             ),
+      .inversion_detected    ( inversion_detected      ),
       .OS_rec_cfg_detected   ( OS_rec_cfg_detected     ),
+      .IDLE_detected         ( IDLE_detected           ),
+
+      .OS_count_maxed        ( s_rx_flag_OS            ),
+      .timeout_flag          ( s_timeout_OS            ),
+      .IDLE_count_maxed      ( s_rx_flag_IDLE          ),
+      .rec_cfg_count_maxed   ( s_recovery_cfg_rx_flag  ),
       .rec_idle_count_maxed  ( s_recovery_idle_rx_flag ),
 
-      .rx_data_DLL           ( o_RxData          )
-   );
-//-------------------------------------------------------------------------------------------------------------------------------
-// Transmitter counter
-   ccfpga_tx_count #(
-      .COUNT_WIDTH               ( 5                             ),
-      .DATA_BYTES                ( DATA_BYTES                    )
-   ) tx_count_inst (
-      .clk                       ( i_PCLK                        ),
-      .OS_reset_flag             ( s_tx_OS_flag_rst              ),
-      .IDLE_reset_flag           ( s_tx_IDLE_flag_rst            ),
-      .polling_active_reset_flag ( s_polling_active_tx_flag_rst  ),
-      .OS_sent                   ( OS_sent                       ),
-      .OS_valid                  ( OS_valid                      ),
-      .OS_rec_cfg_detected       ( OS_rec_cfg_detected           ),
-      .IDLE_sent                 ( IDLE_sent                     ),
-      .IDLE_detected             ( IDLE_detected                 ),
-      .OS_max_count              ( tx_max_count                  ),
+      .expected_Link         ( expected_Link           ),
+      .expected_Lane         ( expected_Lane           ),
+      .expected_Ctrl         ( expected_Ctrl           ),
+      .link_detected         ( link_detected           ),
+      .lane_detected         ( lane_detected           ),
 
-      .OS_count_maxed            ( s_tx_flag_OS                  ),
-      .IDLE_count_maxed          ( s_tx_flag_IDLE                ),
-      .polling_active_count_maxed( s_polling_active_tx_flag      )
+      .rx_data_DLL           ( o_RxData                ),
+      .rx_dataK_DLL          ( o_RxDataK               )
    );
 //-------------------------------------------------------------------------------------------------------------------------------
-// Clock count (Timeout)
+// ----- Transmitter of MAC layer -----
+   ccfpga_tx_MAC #(
+      .DATA_BYTES      ( DATA_BYTES        ),
+      .PATTERN_WIDTH   ( PATTERN_WIDTH     )
+   ) tx_MAC_inst (
+      .clk                          ( i_PCLK                       ),
+      .reset                        ( reset                        ),
+
+      .tx_data                      ( i_TxData                     ),
+
+      .s_tx_OS_flag_rst             ( s_tx_OS_flag_rst             ),
+      .s_tx_IDLE_flag_rst           ( s_tx_IDLE_flag_rst           ),
+      .s_polling_active_tx_flag_rst ( s_polling_active_tx_flag_rst ),
+
+      .OS_valid                     ( OS_valid                     ),
+      .OS_rec_cfg_detected          ( OS_rec_cfg_detected          ),
+      .IDLE_detected                ( IDLE_detected                ),
+
+      .send_OS_trigger              ( send_OS_trigger              ),
+      .send_IDLE_trigger            ( send_IDLE_trigger            ),
+      .OS_type                      ( OS_type                      ),
+      .tx_max_count                 ( tx_max_count                 ),
+
+      .expected_Link                ( expected_Link                ),
+      .expected_Lane                ( expected_Lane                ),
+      .expected_Ctrl                ( expected_Ctrl                ),
+
+      .s_tx_flag_OS                 ( s_tx_flag_OS                 ),
+      .s_tx_flag_IDLE               ( s_tx_flag_IDLE               ),
+      .s_polling_active_tx_flag     ( s_polling_active_tx_flag     ),
+      .sending_OS                   ( sending_OS                   ),
+      .sending_data                 ( sending_data                 ),
+      .sending_SKP                  ( sending_SKP                  ),
+
+      .txdata_reg                   ( txdata_reg                   ),
+      .txdatak_reg                  ( txdatak_reg                  )
+   );
+//-------------------------------------------------------------------------------------------------------------------------------
+// ----- Clock count (Timeout) -----
    ccfpga_clk_counter # (
       .BIT_WIDTH        ( 21                 )
    ) timeout_counter_inst (
@@ -349,124 +346,12 @@ module ccfpga_LTSSM_logic #(
       .o_flag           ( s_timeout_clk      )      // Output Flag when Count reaches max count
    );
 //-------------------------------------------------------------------------------------------------------------------------------
-// Sending modules
-   // Send OS module
-   ccfpga_send_OS #(
-   .PATTERN_WIDTH   ( PATTERN_WIDTH   ),
-   .DATA_BYTES      ( DATA_BYTES      )
-   ) send_OS_inst (
-   .clk             ( i_PCLK          ),
-   .send_OS_trigger ( send_OS_trigger ),
-   .reset           ( reset           ),
-   .received_Link   ( expected_Link   ),
-   .received_Lane   ( expected_Lane   ),
-   .received_Ctrl   ( expected_Ctrl   ),
-   .OS_type         ( OS_type         ), // 0:TS1, 1:TS2
+// ----- Scrambler -----
+   wire                  scrambler_en;
+   wire [DATA_BYTES-1:0] tx_char_is_training_sequence;
+   wire [DATA_WIDTH-1:0] scrambled_data;
+   wire [DATA_BYTES-1:0] scrambled_data_k;
 
-   .txdata          ( txdata_OS       ),
-   .txdatak         ( txdatak_OS      ),
-   .OS_sent         ( OS_sent         ),
-   .sending_OS      ( sending_OS      )
-   );
-   // Send IDLE module
-   ccfpga_send_IDLE #(
-   .IDLE_WIDTH        ( 8                 ),
-   .DATA_WIDTH        ( DATA_WIDTH        )
-   ) send_IDLE_inst (
-   .clk               ( i_PCLK            ),
-   .send_IDLE_trigger ( send_IDLE_trigger ),
-   .reset             ( reset             ),
-
-   .txdata            ( txdata_IDLE       ),
-   .txdatak           ( txdatak_IDLE      ),
-   .IDLE_sent         ( IDLE_sent         )
-   );
-   // Send Data
-   ccfpga_send_data #(
-   .DATA_BYTES      ( DATA_BYTES   )
-   ) send_data_inst (
-   .clk             ( i_PCLK       ),
-   .reset           ( reset        ),
-   .txdata_DLL      ( i_TxData     ),
-
-   .txdata          ( txdata_DLL   ),
-   .txdatak         ( txdatak_DLL  ),
-   .sending_data    ( sending_data )
-   );
-   // SKP Generator
-   ccfpga_SKP_generator #(
-   .SKP_WIDTH       ( 32                ),
-   .DATA_BYTES      ( DATA_BYTES        )
-   )  SKP_generator_inst (
-   .clk             ( i_PCLK            ),
-   .reset           ( reset             ),
-   .sending_data    ( sending_data      ),
-   .sending_OS      ( sending_OS        ),
-   .sending_IDLE    ( send_IDLE_trigger ),
-
-   .txdata          ( txdata_SKP        ),
-   .txdatak         ( txdatak_SKP       ),
-   .sending_SKP     ( sending_SKP       )
-   );
-//-------------------------------------------------------------------------------------------------------------------------------
-// Set detected Link/Lane number and control bits based on received Ordered Sets
-   always @(posedge i_PCLK or negedge i_Reset_n) begin
-      if ( !i_Reset_n ) begin
-         expected_Link <= 8'hF7;
-         expected_Lane <= 8'hF7;
-         expected_Ctrl <= 8'h00;
-         link_detected <= 1'b0;
-         lane_detected <= 1'b0;
-      end else if ( fsm_state == 5'b10010 ) begin // CONFIG_LINKWIDTH_START_LINKNUM
-         if ( OS_detected == 1'b1 && Link_number != 8'hF7 ) begin
-            expected_Link <= Link_number;
-            expected_Lane <= 8'hF7;
-            expected_Ctrl <= 8'h00;
-            link_detected <= 1'b1;
-            lane_detected <= 1'b0;
-         end
-      end else if ( fsm_state == 5'b10011 ) begin // CONFIG_LINKWIDTH_ACCEPT_LANENUM
-         if ( OS_detected == 1'b1 && Lane_number != 8'hF7 && Link_number == expected_Link ) begin
-            expected_Lane <= Lane_number;
-            expected_Ctrl <= 8'h00;
-            link_detected <= 1'b1;
-            lane_detected <= 1'b1;
-         end
-      end else if ( fsm_state == 5'b01000 ) begin // CONFIG_COMPLETE
-         expected_Ctrl <= Control_bits;
-      end else if ( fsm_state == 5'b00000 ) begin // DETECT_QUIET
-         expected_Link <= 8'hF7;
-         expected_Lane <= 8'hF7;
-         expected_Ctrl <= 8'h00;
-         link_detected <= 1'b0;
-         lane_detected <= 1'b0;
-      end
-   end
-//-------------------------------------------------------------------------------------------------------------------------------
-// Transmitted data multiplexer
-   always @(posedge i_PCLK or posedge reset) begin
-      if ( reset ) begin
-         txdata_reg  <= {DATA_WIDTH{1'b0}};
-         txdatak_reg <= {DATA_BYTES{1'b0}};
-      end else if ( sending_data ) begin
-         txdata_reg  <= txdata_DLL;
-         txdatak_reg <= txdatak_DLL;
-      end else if ( sending_OS ) begin
-         txdata_reg  <= txdata_OS;
-         txdatak_reg <= txdatak_OS;
-      end else if ( send_IDLE_trigger ) begin
-         txdata_reg  <= txdata_IDLE;
-         txdatak_reg <= txdatak_IDLE;
-      end else if ( sending_SKP ) begin
-         txdata_reg  <= txdata_SKP;
-         txdatak_reg <= txdatak_SKP;
-      end else begin
-         txdata_reg  <= {DATA_WIDTH{1'b0}};
-         txdatak_reg <= {DATA_BYTES{1'b0}};
-      end
-   end
-//-------------------------------------------------------------------------------------------------------------------------------
-// Scrambler and Descrambler
    // Scrambled output data
    always @(posedge i_PCLK or posedge reset) begin
       if ( reset ) begin
@@ -493,6 +378,13 @@ module ccfpga_LTSSM_logic #(
    .data_out_k    ( scrambled_data_k             )
    );
 
+// ----- Descrambler -----
+   wire                  descrambler_en;
+   wire [DATA_BYTES-1:0] rx_char_is_training_sequence;
+
+   reg  [DATA_WIDTH-1:0] rxdata_reg;
+   reg  [DATA_BYTES-1:0] rxdatak_reg;
+
    // Capture input data
    always @(posedge i_PCLK or posedge reset) begin
       if ( reset ) begin
@@ -515,8 +407,8 @@ module ccfpga_LTSSM_logic #(
    .data_in_k     ( rxdatak_reg                  ),
    .data_in_TS    ( rx_char_is_training_sequence ),
 
-   .data_out      ( unscrambled_data             ),
-   .data_out_k    ( unscrambled_data_k           )
+   .data_out      ( descrambled_data             ),
+   .data_out_k    ( descrambled_data_k           )
    );
 
    // TODO: Question: if we sending nothing, maybe waiting for data from upper layer
