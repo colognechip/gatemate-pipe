@@ -67,9 +67,6 @@ module ccfpga_LTSSM_logic #(
    wire       IDLE_detected;            // IDLE symbol detected
    wire       OS_rec_cfg_detected;      // Received OS with non-match Link/Lane in Recovery.RcvrCfg
    wire       s_rx_flag_OS;             // Max count for received Orderes Set reached
-   wire [7:0] Link_number;              // Detected link number
-   wire [7:0] Lane_number;              // Detected lane number
-   wire [7:0] Control_bits;             // Detected control bits
    wire       s_recovery_idle_rx_flag_rst;  // Recovery Idle Rx Reset flag (TS1 with PAD-Lane)
    wire       s_recovery_idle_rx_flag;      // Recovery Idle Rx flag (TS1 with PAD-Lane)
    wire       s_recovery_cfg_rx_flag_rst;   // Recovery Rcvrcfg Rx Reset flag (TS1 with non-matched Link/Lane)
@@ -81,7 +78,6 @@ module ccfpga_LTSSM_logic #(
    wire       s_tx_OS_flag_rst;     // Transmitter flag reset
    wire       s_tx_IDLE_flag_rst;   // Transmitter IDLE flag reset
    wire       s_tx_flag_IDLE;       // Max count for transmitted IDLE reached
-   wire       OS_sent;              // An OS is sent
    wire [4:0] tx_max_count;         // Max count for transmitter
    wire       s_tx_flag_OS;         // Max count for transmitter reached
    wire       OS_type;              // Type of Ordered Set to be sent
@@ -91,7 +87,7 @@ module ccfpga_LTSSM_logic #(
 // Timeout signals
    wire s_clk_timeout_rst;    // Timeout reset
    wire s_OS_timeout_rst;     // Timeout reset
-   wire [20:0] clk_max_count;  // Max count for timeout
+   wire [20:0] clk_max_count; // Max count for timeout
    wire s_timeout;            // Timeout flag
    wire s_timeout_clk;        // Timeout due to clock
    wire s_timeout_OS;         // Timeout due to received OS
@@ -113,7 +109,6 @@ module ccfpga_LTSSM_logic #(
    wire [DATA_BYTES-1:0] txdatak_reg;
 //-------------------------------------------------------------------------------------------------------------------------------
 // Inversion Detection
-   wire                  detect_inversion_en = fsm_state == 5'b00010; // Enable in POLLING_ACTIVE
    wire                  inversion_detected;
 //-------------------------------------------------------------------------------------------------------------------------------
 // Descrambler signals

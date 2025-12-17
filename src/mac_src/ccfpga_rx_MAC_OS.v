@@ -63,6 +63,8 @@ module ccfpga_rx_MAC_OS #(
     wire               inc_count_rec_idle;   // Increment TS1 count with PAD-Lane in Recovery.Idle
     wire               clear_count_rec_idle; // Clear TS1 count with PAD-Lane in Recovery.Idle
 
+    wire               detect_inversion_en = fsm_state == 5'b00010; // Enable in POLLING_ACTIVE
+
     reg [COUNT_WIDTH-1:0] rx_count_OS;       // Ordered Set count
     reg             [1:0] rx_count_timeout;  // Ordered Set count for timeout
     reg             [3:0] rx_count_rec_cfg;  // Ordered Set count for Recovery config
@@ -84,6 +86,7 @@ module ccfpga_rx_MAC_OS #(
         .expected_Link        ( expected_Link        ),
         .expected_Lane        ( expected_Lane        ),
         .expected_Ctrl        ( expected_Ctrl        ),
+        .detect_inversion_en  ( detect_inversion_en  ),
 
         .OS_valid             ( OS_valid             ),
         .OS_detected          ( OS_detected          ),

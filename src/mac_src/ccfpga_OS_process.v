@@ -23,6 +23,7 @@ module ccfpga_OS_process #(
     input  wire [7:0]               expected_Link,        // Expected Link number
     input  wire [7:0]               expected_Lane,        // Expected Lane number
     input  wire [7:0]               expected_Ctrl,        // Expected Ctrl field
+    input  wire                     detect_inversion_en,  // Inversion detection enable
 
     output reg                      OS_valid,             // Ordered Set valid flag
     output reg                      OS_detected,          // Ordered Set detection flag
@@ -139,10 +140,10 @@ module ccfpga_OS_process #(
     always @ (posedge clk or posedge reset) begin
         if ( reset ) begin
             inversion_detected <= 1'b0;
-        end else if ( (COM_detected == 1'b1) && rx_OS_inv ) begin
-            inversion_detected <= 1'b1;
-        end else begin
-            inversion_detected <= inversion_detected;
+        end else if ( detect_inversion_en ) begin
+            if ( (COM_detected == 1'b1) && rx_OS_inv ) begin
+                inversion_detected <= 1'b1;
+            end
         end
     end
 
