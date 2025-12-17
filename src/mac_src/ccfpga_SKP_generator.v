@@ -15,6 +15,7 @@ module ccfpga_SKP_generator #(
     input wire sending_OS,
     input wire sending_IDLE,
 
+    output wire SKP_in_queue,
     output reg [DATA_WIDTH - 1 : 0] txdata,
     output reg [DATA_BYTES - 1 : 0] txdatak,
     output reg sending_SKP
@@ -147,5 +148,6 @@ module ccfpga_SKP_generator #(
 
     assign SKP_count_inc   = s_count == COUNT_MIN;
     assign SKP_send_enable = (number_of_queued_SKP != 4'b0) && (sending_data == 1'b0) && (sending_OS == 1'b0) && (sending_IDLE == 1'b0);
+    assign SKP_in_queue    = (number_of_queued_SKP != 4'b0);
 
 endmodule

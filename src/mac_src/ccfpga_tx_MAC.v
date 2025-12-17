@@ -45,6 +45,8 @@ module ccfpga_tx_MAC #(
 
    wire                    OS_sent;       // Ordered Set sent indication
    wire                    IDLE_sent;     // IDLE sent indication
+   wire                    SKP_in_queue;  // SKP Ordered Set scheduled in queue
+   wire                    sending_IDLE;  // Sending IDLE indication
 
 // Transmitter counter
    ccfpga_tx_count #(
@@ -83,6 +85,7 @@ module ccfpga_tx_MAC #(
    .received_Lane   ( expected_Lane   ),
    .received_Ctrl   ( expected_Ctrl   ),
    .OS_type         ( OS_type         ), // 0:TS1, 1:TS2
+   .SKP_in_queue    ( SKP_in_queue    ),
 
    .txdata          ( txdata_OS       ),
    .txdatak         ( txdatak_OS      ),
@@ -101,10 +104,12 @@ module ccfpga_tx_MAC #(
    .clk               ( clk               ),
    .send_IDLE_trigger ( send_IDLE_trigger ),
    .reset             ( reset             ),
+   .SKP_in_queue      ( SKP_in_queue      ),
 
    .txdata            ( txdata_IDLE       ),
    .txdatak           ( txdatak_IDLE      ),
-   .IDLE_sent         ( IDLE_sent         )
+   .IDLE_sent         ( IDLE_sent         ),
+   .sending_IDLE      ( sending_IDLE      )
    );
 
    // Send Data
@@ -135,8 +140,9 @@ module ccfpga_tx_MAC #(
    .reset           ( reset             ),
    .sending_data    ( sending_data      ),
    .sending_OS      ( sending_OS        ),
-   .sending_IDLE    ( send_IDLE_trigger ),
+   .sending_IDLE    ( sending_IDLE      ),
 
+   .SKP_in_queue    ( SKP_in_queue      ),
    .txdata          ( txdata_SKP        ),
    .txdatak         ( txdatak_SKP       ),
    .sending_SKP     ( sending_SKP       )

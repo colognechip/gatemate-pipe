@@ -19,6 +19,7 @@ module ccfpga_send_OS #(
    input wire [7:0] received_Lane,
    input wire [7:0] received_Ctrl,
    input wire OS_type,          // 0:TS1, 1:TS2
+   input wire SKP_in_queue,
 
    output reg [DATA_WIDTH - 1 : 0] txdata,
    output reg [DATA_BYTES - 1 : 0] txdatak,
@@ -38,6 +39,7 @@ module ccfpga_send_OS #(
    wire                         PAD_link;
    wire                         PAD_lane;
 
+   reg                               SKP_in_queue_reg;
    reg [$clog2(NUMBER_OF_STEPS) : 0] step;
 
    always @ (posedge clk or posedge reset) begin
@@ -47,19 +49,26 @@ module ccfpga_send_OS #(
          OS_sent <= 1'b0;
          step    <= 0;
          sending_OS <= 1'b0;
-      end else if (send_OS_trigger == 1'b1) begin
+         SKP_in_queue_reg <= 1'b0;
+      end else if (send_OS_trigger == 1'b1 && SKP_in_queue_reg == 1'b0) begin
          if ( step != NUMBER_OF_STEPS ) begin
             txdata  <= pattern[DATA_WIDTH * step +: DATA_WIDTH];
             txdatak <= pattern_k[DATA_BYTES * step +: DATA_BYTES];
             OS_sent <= 1'b0;
             sending_OS <= 1'b1;
             step    <= step + 1;
+            SKP_in_queue_reg <= SKP_in_queue_reg;
          end else if ( step == NUMBER_OF_STEPS ) begin
             txdata  <= pattern[DATA_WIDTH * step +: DATA_WIDTH];
             txdatak <= pattern_k[DATA_BYTES * step +: DATA_BYTES];
             OS_sent <= 1'b1;
             sending_OS <= 1'b1;
             step    <= 0;
+            if (SKP_in_queue == 1'b1) begin
+               SKP_in_queue_reg <= 1'b1;
+            end else begin
+               SKP_in_queue_reg <= SKP_in_queue_reg;
+            end
          end
       end else begin
          txdata  <= {DATA_WIDTH{1'b0}};
@@ -67,6 +76,11 @@ module ccfpga_send_OS #(
          OS_sent <= 1'b0;
          sending_OS <= 1'b0;
          step    <= 0;
+         if (SKP_in_queue == 1'b0) begin
+            SKP_in_queue_reg <= 1'b0;
+         end else begin
+            SKP_in_queue_reg <= SKP_in_queue_reg;
+         end
       end
    end
 
