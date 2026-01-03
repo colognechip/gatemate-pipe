@@ -229,35 +229,27 @@ module ccfpga_data_assembly #(
                     COM_detected <= 1'b0;
                     data_OS      <= {PATTERN_WIDTH{1'b0}};
                 end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM ) begin
-                    if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == SKP ) begin
+                    if ( rx_data_shift[NUMBER_OF_STEPS - 1][7:0] == SKP ) begin
                         COM_detected    <= 1'b0;
                         data_OS         <= {PATTERN_WIDTH{1'b0}};
                     end else begin
                         COM_detected       <= 1'b1;
-                        data_OS[15:0]      <= rx_data_shift[NUMBER_OF_STEPS];
-                        data_OS[31:16]     <= rx_data_shift[NUMBER_OF_STEPS - 1];
-                        data_OS[47:32]     <= rx_data_shift[NUMBER_OF_STEPS - 2];
-                        data_OS[63:48]     <= rx_data_shift[NUMBER_OF_STEPS - 3];
-                        data_OS[79:64]     <= rx_data_shift[NUMBER_OF_STEPS - 4];
-                        data_OS[95:80]     <= rx_data_shift[NUMBER_OF_STEPS - 5];
-                        data_OS[111:96]    <= rx_data_shift[NUMBER_OF_STEPS - 6];
-                        data_OS[127:112]   <= rx_data_shift[NUMBER_OF_STEPS - 7];
-                    end
-                end else if (rx_data_shift[NUMBER_OF_STEPS][15:8] == COM ) begin
-                    if ( rx_data_shift[NUMBER_OF_STEPS-1][7:0] == SKP ) begin
-                        COM_detected    <= 1'b0;
-                        data_OS         <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[7:0]       <= rx_data_shift[NUMBER_OF_STEPS][15:8];
-                        data_OS[23:8]      <= rx_data_shift[NUMBER_OF_STEPS - 1][15:0];
-                        data_OS[39:24]     <= rx_data_shift[NUMBER_OF_STEPS - 2][15:0];
-                        data_OS[55:40]     <= rx_data_shift[NUMBER_OF_STEPS - 3][15:0];
-                        data_OS[71:56]     <= rx_data_shift[NUMBER_OF_STEPS - 4][15:0];
-                        data_OS[87:72]     <= rx_data_shift[NUMBER_OF_STEPS - 5][15:0];
-                        data_OS[103:88]    <= rx_data_shift[NUMBER_OF_STEPS - 6][15:0];
-                        data_OS[119:104]   <= rx_data_shift[NUMBER_OF_STEPS - 7][15:0];
-                        data_OS[127:120]   <= rx_data_shift[NUMBER_OF_STEPS - 8][7:0];
+                        data_OS[7:0]       <= rx_data_shift[NUMBER_OF_STEPS];
+                        data_OS[15:8]      <= rx_data_shift[NUMBER_OF_STEPS - 1];
+                        data_OS[23:16]     <= rx_data_shift[NUMBER_OF_STEPS - 2];
+                        data_OS[31:24]     <= rx_data_shift[NUMBER_OF_STEPS - 3];
+                        data_OS[39:32]     <= rx_data_shift[NUMBER_OF_STEPS - 4];
+                        data_OS[47:40]     <= rx_data_shift[NUMBER_OF_STEPS - 5];
+                        data_OS[55:48]     <= rx_data_shift[NUMBER_OF_STEPS - 6];
+                        data_OS[63:56]     <= rx_data_shift[NUMBER_OF_STEPS - 7];
+                        data_OS[71:64]     <= rx_data_shift[NUMBER_OF_STEPS - 8];
+                        data_OS[79:72]     <= rx_data_shift[NUMBER_OF_STEPS - 9];
+                        data_OS[87:80]     <= rx_data_shift[NUMBER_OF_STEPS - 10];
+                        data_OS[95:88]     <= rx_data_shift[NUMBER_OF_STEPS - 11];
+                        data_OS[103:96]    <= rx_data_shift[NUMBER_OF_STEPS - 12];
+                        data_OS[111:104]   <= rx_data_shift[NUMBER_OF_STEPS - 13];
+                        data_OS[119:112]   <= rx_data_shift[NUMBER_OF_STEPS - 14];
+                        data_OS[127:120]   <= rx_data_shift[NUMBER_OF_STEPS - 15];
                     end
                 end else begin
                     COM_detected <= 1'b0;
