@@ -18,10 +18,6 @@ VHDL_SRC = $(shell find ./src/ -type f \( -iname \*.vhd -o -iname \*.vhdl \))
 testcase: serdesflow_mod
 	source serdesflow_mod
 
-## MAC testcases
-mac_testcase: testbench_script
-	source testbench_script
-
 ## open source toolchain
 net/$(TOP)_synth.json: $(VLOG_SRC)
 	mkdir -p log/

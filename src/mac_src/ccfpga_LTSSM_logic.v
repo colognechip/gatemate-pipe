@@ -410,8 +410,8 @@ module ccfpga_LTSSM_logic #(
    // TODO: Question: if we sending nothing, maybe waiting for data from upper layer
    // should the scrambler_en disabled?
    // Scrambler enabled when not directed in control bits and sending data/OS/SKP
-   //assign scrambler_en = (sending_data | sending_OS | send_IDLE_trigger | sending_SKP) & ~expected_Ctrl[3];
-   assign scrambler_en = (sending_data | sending_OS | sending_SKP) & ~expected_Ctrl[3];
+   assign scrambler_en = ~expected_Ctrl[3];
+   //assign scrambler_en = (sending_data | sending_OS | sending_SKP) & ~expected_Ctrl[3];
    // Descrambler enabled when not directed in control bits
    assign descrambler_en = ~expected_Ctrl[3];
    // Training sequence indication for scrambler/descrambler
