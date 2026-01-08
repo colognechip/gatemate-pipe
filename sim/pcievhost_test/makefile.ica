@@ -147,7 +147,7 @@ $(VPROCLIB): $(VPROC_TOP)
 # Build the verilog
 #
 # Verilog source
-VLOG_SRC = $(shell find ../../src/mac_src/ -type f \( -iname \*.v -o -iname \*.sv \))
+VLOG_SRC = $(shell find ../../src/ -type f \( -iname \*.v -o -iname \*.sv \))
 
 verilog: $(PLI_SO) $(VLOGFILES) $(PCIE_MAP_V)
 	@iverilog -o $(SIMEXE) $(VLOGFLAGS) $(VLOG_SRC) -s test
