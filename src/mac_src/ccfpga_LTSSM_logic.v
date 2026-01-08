@@ -310,6 +310,7 @@ module ccfpga_LTSSM_logic #(
       .OS_valid                     ( OS_valid                     ),
       .OS_rec_cfg_detected          ( OS_rec_cfg_detected          ),
       .IDLE_detected                ( IDLE_detected                ),
+      .L0_enabled                   ( L0_enabled                   ),
 
       .send_OS_trigger              ( send_OS_trigger              ),
       .send_IDLE_trigger            ( send_IDLE_trigger            ),

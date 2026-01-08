@@ -12,7 +12,7 @@ module ccfpga_tx_MAC #(
    input wire                  clk,                          // Clock
    input wire                  reset,                        // Asynchronous reset
 
-   input wire [DATA_WIDTH-1:0] tx_data,                     // Data from DLL
+   input wire [DATA_WIDTH-1:0] tx_data,                      // Data from DLL
 
    input wire                  s_tx_OS_flag_rst,             // Transmitter OS flag Reset
    input wire                  s_tx_IDLE_flag_rst,           // Transmitter IDLE flag Reset
@@ -21,6 +21,7 @@ module ccfpga_tx_MAC #(
    input wire                  OS_valid,                     // Ordered Set valid indication
    input wire                  OS_rec_cfg_detected,          // non-matched Link/Lane Ordered Set detected in Recovery Config state
    input wire                  IDLE_detected,                // IDLE detected indication
+   input wire                  L0_enabled,                   // L0 state enabled indication
 
    input wire                  send_OS_trigger,              // Trigger to send Ordered Set
    input wire                  send_IDLE_trigger,            // Trigger to send IDLE
@@ -121,7 +122,8 @@ module ccfpga_tx_MAC #(
    ) send_data_inst (
    .clk             ( clk          ),
    .reset           ( reset        ),
-   .txdata_DLL      ( tx_data     ),
+   .L0_enabled      ( L0_enabled   ),
+   .txdata_DLL      ( tx_data      ),
 
    .txdata          ( txdata_DLL   ),
    .txdatak         ( txdatak_DLL  ),
