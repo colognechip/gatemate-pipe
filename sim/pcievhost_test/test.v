@@ -191,7 +191,7 @@ begin
   s_rx_valid      = 1'b1;
   $display("---------------------------------------------");
   $display("Power state: %b", s_power_down);
-  $display("FSM State: %b", mac_inst.fsm_state);
+  $display("FSM State: %b", mac_inst.s_fsm_state);
   $display("Link Up: %b", s_linkup);
   $display("---------------------------------------------");
   # (`CLK_PERIOD*100);
@@ -201,7 +201,7 @@ begin
   $display("---------------------------------------------");
   $display("---------------------------------------------");
   $display("Power state: %b", s_power_down);
-  $display("FSM State: %b", mac_inst.fsm_state);
+  $display("FSM State: %b", mac_inst.s_fsm_state);
   $display("Link Up: %b", s_linkup);
   $display("---------------------------------------------");
   # (`CLK_PERIOD*100);
@@ -211,7 +211,7 @@ begin
   $display("---------------------------------------------");
   $display("---------------------------------------------");
   $display("Power state: %b", s_power_down);
-  $display("FSM State: %b", mac_inst.fsm_state);
+  $display("FSM State: %b", mac_inst.s_fsm_state);
   $display("Link Up: %b", s_linkup);
   $display("---------------------------------------------");
   # (`CLK_PERIOD*10);
@@ -219,7 +219,7 @@ begin
   # (`CLK_PERIOD*100);
   $display("---------------------------------------------");
   $display("Power state: %b", s_power_down);
-  $display("FSM State: %b", mac_inst.fsm_state);
+  $display("FSM State: %b", mac_inst.s_fsm_state);
   $display("Link Up: %b", s_linkup);
   $display("---------------------------------------------");
 end
