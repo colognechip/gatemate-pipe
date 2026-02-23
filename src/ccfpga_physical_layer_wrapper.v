@@ -23,10 +23,10 @@ module ccfpga_physical_layer_wrapper #(
    wire                   s_phy_status;
    wire             [2:0] s_rx_status;
    wire                   s_rx_elec_idle;
-   wire                   s_power_down;
+   wire             [1:0] s_power_down;
    wire                   s_tx_detect_rx;
    wire                   s_tx_elec_idle;
-   wire                   s_tx_compliance;
+   wire  [DATA_BYTES-1:0] s_tx_compliance;
    wire                   s_rx_polarity;
    wire  [DATA_WIDTH-1:0] s_tx_data;
    wire  [DATA_BYTES-1:0] s_tx_datak;
