@@ -74,7 +74,7 @@ module ccfpga_send_data #(
    // Detect special characters (STP, SDP or END) in all symbol positions
    generate
       genvar i;
-      for (i = 0; i < DATA_BYTES; i = i + 1) begin
+      for (i = 0; i < DATA_BYTES; i = i + 1) begin : k_detect
          assign char_is_K[i]   = (txdata_DLL[8*i +: 8] == STP) || (txdata_DLL[8*i +: 8] == SDP);
          assign char_is_END[i] = (txdata_DLL[8*i +: 8] == _END);
          assign txdatak_reg[i] = char_is_K[i] || char_is_END[i];

@@ -61,7 +61,7 @@ module ccfpga_rx_MAC_data #(
     // Detection of special characters (STP, SDP or END) in all symbol positions
     generate
         genvar j;
-        for (j = 0; j < DATA_BYTES; j = j + 1) begin
+        for (j = 0; j < DATA_BYTES; j = j + 1) begin : k_detect
             assign char_is_K[j]   = (rx_data[8*j +: 8] == STP) || (rx_data[8*j +: 8] == SDP);
             assign char_is_END[j] = (rx_data[8*j +: 8] == _END);
         end

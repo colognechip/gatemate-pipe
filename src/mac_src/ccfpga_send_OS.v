@@ -39,7 +39,7 @@ module ccfpga_send_OS #(
    wire                         PAD_link;
    wire                         PAD_lane;
 
-   reg                               SKP_in_queue_reg;
+   reg                               SKP_in_queue_reg; // Register to hold SKP_in_queue status for the duration of OS transmission, only updated when finishing sending an OS
    reg [$clog2(NUMBER_OF_STEPS) : 0] step;
 
    always @ (posedge clk or posedge reset) begin

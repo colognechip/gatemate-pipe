@@ -55,7 +55,7 @@ module ccfpga_scrambler #(
     // Generate scrambler_value for each byte
     genvar i;
     generate
-        for (i = 0; i < DATA_BYTES; i = i + 1) begin
+        for (i = 0; i < DATA_BYTES; i = i + 1) begin : scrambler
             ccfpga_scrambler_byte scrambler_byte_inst (
                 .data_in               (data_in[i*8 +: 8]),
                 .scrambler_en          (scrambler_en),
