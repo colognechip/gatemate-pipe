@@ -51,8 +51,8 @@ reg                   s_rx_valid;
 reg                   s_phy_status;
 reg             [2:0] s_rx_status;
 reg                   s_rx_elec_idle;
-wire [DATA_WIDTH-1:0] s_txdata;
-wire [DATA_BYTES-1:0] s_txdatak;
+reg  [DATA_WIDTH-1:0] s_txdata;
+reg  [DATA_BYTES-1:0] s_txdatak;
 
 wire            [1:0] s_power_down;
 wire                  s_tx_detect_rx;
@@ -144,23 +144,6 @@ wire [DATA_BYTES-1:0] LinkUpDataKInt    = LinkUpDataK;
       .o_LinkUp            ( s_linkup         )
    );
 
-    virtual_channel #(
-      .DATA_BYTES(8),
-      .PATTERN_WIDTH(64)
-    ) vc_inst (
-      .clk(PClk),
-      .reset(~notReset),
-      .i_LinkUp(s_linkup),
-      .rx_data(s_rx_data),
-      .tx_data_TL(),
-      .tx_data_TL_k(),
-
-      .txdata(s_txdata),
-      .txdatak(s_txdatak),
-      .rx_data_TL(),
-      .rx_data_TL_k()
-    );
-
 initial
 begin
   // If specified, dump a VCD file
@@ -201,12 +184,14 @@ begin
   s_phy_status    = 1'b0;
   s_rx_status     = 3'b000;
   s_rx_elec_idle  = 1'b1;
+  s_txdata        = 64'h0000_0000_0000_0000;
+  s_txdatak       = 8'h00;
 
   # (`CLK_PERIOD*100);
   s_rx_valid      = 1'b1;
   $display("---------------------------------------------");
   $display("Power state: %b", s_power_down);
-  $display("FSM State: %b", mac_inst.fsm_state);
+  $display("FSM State: %b", mac_inst.s_fsm_state);
   $display("Link Up: %b", s_linkup);
   $display("---------------------------------------------");
   # (`CLK_PERIOD*100);
@@ -216,7 +201,7 @@ begin
   $display("---------------------------------------------");
   $display("---------------------------------------------");
   $display("Power state: %b", s_power_down);
-  $display("FSM State: %b", mac_inst.fsm_state);
+  $display("FSM State: %b", mac_inst.s_fsm_state);
   $display("Link Up: %b", s_linkup);
   $display("---------------------------------------------");
   # (`CLK_PERIOD*100);
@@ -226,7 +211,7 @@ begin
   $display("---------------------------------------------");
   $display("---------------------------------------------");
   $display("Power state: %b", s_power_down);
-  $display("FSM State: %b", mac_inst.fsm_state);
+  $display("FSM State: %b", mac_inst.s_fsm_state);
   $display("Link Up: %b", s_linkup);
   $display("---------------------------------------------");
   # (`CLK_PERIOD*10);
@@ -234,7 +219,7 @@ begin
   # (`CLK_PERIOD*100);
   $display("---------------------------------------------");
   $display("Power state: %b", s_power_down);
-  $display("FSM State: %b", mac_inst.fsm_state);
+  $display("FSM State: %b", mac_inst.s_fsm_state);
   $display("Link Up: %b", s_linkup);
   $display("---------------------------------------------");
 end
@@ -258,4 +243,3 @@ begin
 end
 endtask
 endmodule
-

@@ -21,7 +21,7 @@ module ccfpga_tx_MAC #(
    input wire                  OS_valid,                     // Ordered Set valid indication
    input wire                  OS_rec_cfg_detected,          // non-matched Link/Lane Ordered Set detected in Recovery Config state
    input wire                  IDLE_detected,                // IDLE detected indication
-   input wire                  L0_enabled,                   // L0 state enabled
+   input wire                  L0_enabled,                   // L0 state enabled indication
 
    input wire                  send_OS_trigger,              // Trigger to send Ordered Set
    input wire                  send_IDLE_trigger,            // Trigger to send IDLE
