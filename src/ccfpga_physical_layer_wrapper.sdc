@@ -1,0 +1,1 @@
+create_clock -name mac_inst.ccfpga_LTSSM_fsm_inst.i_PCLK -period 32 [get_ports {'mac_inst.ccfpga_LTSSM_fsm_inst.i_PCLK'}]

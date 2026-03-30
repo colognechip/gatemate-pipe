@@ -1,17 +1,18 @@
 SHELL := /bin/bash
 ## tools
 YOSYS = yosys
-NEXTPNR = nextpnr-himbaechel
+NEXTPNR = ../nextpnr/build/nextpnr-himbaechel
 PACK = gmpack
 OFL = openFPGALoader
+CCF_SRC = src/
 
 TOP = ccfpga_physical_layer_wrapper
 PRFLAGS  = -ccf src/$(TOP).ccf -cCP -crc
-NEXTPNRFLAGS =
+NEXTPNRFLAGS = --vopt allow-unconstrained -o time_mode=typical -o fpga_mode=speed --timing-allow-fail --placer-heap-beta 0.5 --freq 31.25
 OFLFLAGS = --index-chain 0
 
 ## target sources
-VLOG_SRC = $(shell find ./src/ -type f \( -iname \*.v -o -iname \*.sv \))
+VLOG_SRC = $(shell find ./src/mac_src/ ./src/pipe_src/ -type f \( -iname \*.v -o -iname \*.sv \)) ./src/ccfpga_physical_layer_wrapper.v
 VHDL_SRC = $(shell find ./src/ -type f \( -iname \*.vhd -o -iname \*.vhdl \))
 
 ## PIPE testcases
@@ -25,7 +26,7 @@ net/$(TOP)_synth.json: $(VLOG_SRC)
 	$(YOSYS) -l log/synth.log -p 'read_verilog -sv $^; synth_gatemate -nomx8 -top $(TOP) -luttree $(YSFLAGS) -vlog net/$(TOP)_synth.v -json net/$(TOP)_synth.json'
 
 $(TOP).txt: net/$(TOP)_synth.json $(CCF_SRC)$(TOP).ccf
-	$(NEXTPNR) --device CCGM1A1 --json net/$(TOP)_synth.json --vopt ccf=$(CCF_SRC)$(TOP).ccf $(NEXTPNRFLAGS) --vopt out=$(TOP).txt --router router2
+	$(NEXTPNR) -l log/impl.log --device CCGM1A1 --json net/$(TOP)_synth.json --vopt ccf=$(CCF_SRC)$(TOP).ccf $(NEXTPNRFLAGS) --vopt out=$(TOP).txt --router router2 --sdc src/$(TOP).sdc
 
 $(TOP).bit: $(TOP).txt
 	$(PACK) $(TOP).txt $(TOP).bit
