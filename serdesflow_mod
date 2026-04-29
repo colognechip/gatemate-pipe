@@ -48,7 +48,7 @@ SERDES_SRC_PATH=./serdes_src
 VCD=./sim
 
 #Verilog source
-VLOG_SRC=$(find ${PIPE_FILE_PATH} ${SERDES_SRC_PATH} -type f \( -iname \*.v -o -iname \*.sv \))
+VLOG_SRC=$(find ${PIPE_FILE_PATH} ${SERDES_SRC_PATH} -type f \( -iname \*.v -o -iname \*.sv \) ! -iname "ccfpga_pipe_wrapper.v")
 
 #Simulation environment
 IVL=iverilog

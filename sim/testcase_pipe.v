@@ -869,10 +869,10 @@ status_flag_1 = 1'b1;
     for (i = 0; i < 100 ; i = i + 1) begin
         generate_data;
         send_testdata(DATA_BYTES);
-        //#502
-        #534;
+        #350;
+        //#534;
         //#16;
-        //#24;
+        //#64;
         check_testdata(DATA_BYTES);
     end
 
