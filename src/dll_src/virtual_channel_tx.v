@@ -9,137 +9,271 @@ module virtual_channel_tx #
     input  wire                         clk,
     input  wire                         reset,
 
-    input  wire                   [7:0] dllp_type,  // DLLP Type Field
-    input  wire                  [23:0] data,       // DLLP Data Field
+    input  wire                   [2:0] virtual_channel,
+    input  wire                   [7:0] hdr_credit,
+    input  wire                  [11:0] data_credit,
+    input  wire                   [1:0] update_type,
+    input  wire                   [1:0] packet_type,
+    input  wire                         packet_avail, //pulse
 
     input  wire                         initfc1_en, // Sending InitFC1 sequence
     input  wire                         initfc2_en, // Sending InitFC2 sequence
-    input  wire                         dllp_en,    // Sending normal DLLP
-    input  wire                         tlp_en,     // Sending TLP
-    input  wire        [DATA_WIDTH-1:0] tx_data_TL, // Data from transaction layer
+    //input  wire                  [11:0] nack_sequence_number, // Sequence number for NAK/ACK DLLP
+
+    input  wire                         tlp_valid,
+    input  wire                         tlp_first,
+    input  wire                         tlp_last,
+    input  wire                         tlp_data,
+
+    input  wire                         release_flag,
+    input  wire                         retransmit_flag,
+    input  wire                  [11:0] retransmit_seq_num, // not used
+
+    input  wire                         nak_trigger, //pulse
+    input  wire                         ack_trigger, //pulse
+    input  wire                  [11:0] nak_sequence_number,
+    input  wire                  [11:0] ack_sequence_number,
 
     output reg                          dllp_initfc1_sent,
     output reg                          dllp_initfc2_sent,
-    output reg                          dllp_sent,
-    output reg         [DATA_WIDTH-1:0] txdata,
-    output reg         [DATA_BYTES-1:0] txdatak
+
+    output reg                          retry_buffer_empty,
+    output reg                          retry_buffer_full,
+    //output reg                          dllp_sent,
+    //output reg                          tlp_sent,
+    output reg         [DATA_WIDTH-1:0] tx_data,
+    output reg         [DATA_BYTES-1:0] tx_data_k
 );
 
-    localparam  SDP = 8'h5C;
-    localparam _END = 8'hFD;
-    localparam NUMBER_OF_STEPS = PATTERN_WIDTH / DATA_WIDTH - 1;
-    localparam INITFC_NUMBER_OF_STEPS = (PATTERN_WIDTH * 3) / DATA_WIDTH - 1;
+    wire dllp_sent;
+    wire tlp_scheduled;
+    reg  tlp_scheduled_last;
 
-    wire [PATTERN_WIDTH-1:0] DLLP;
-    wire [PATTERN_WIDTH/8-1:0] DLLP_k;
-    wire [PATTERN_WIDTH*3-1:0] DLLP_initfc1;
-    wire [PATTERN_WIDTH*3/8-1:0] DLLP_initfc1_k;
-    wire [PATTERN_WIDTH*3-1:0] DLLP_initfc2;
-    wire [PATTERN_WIDTH*3/8-1:0] DLLP_initfc2_k;
-    wire [15:0] calc_crc;
+    reg ack_sending;
+    reg nak_sending;
+    reg dllp_sending;
+    reg tlp_sending;
 
-    reg  [$clog2(NUMBER_OF_STEPS) : 0] step;
-    reg  [$clog2(INITFC_NUMBER_OF_STEPS) : 0] initfc_step;
+    reg tlp_available;
 
-    always @ (posedge clk or posedge reset) begin
-        if ( reset ) begin
-            txdata  <= {DATA_WIDTH{1'b0}};
-            txdatak <= {DATA_BYTES{1'b0}};
-            step    <= 0;
-            initfc_step <= 0;
-            dllp_sent <= 1'b0;
-            dllp_initfc1_sent <= 1'b0;
-            dllp_initfc2_sent <= 1'b0;
-        end else if (dllp_en) begin
-            if ( step != NUMBER_OF_STEPS ) begin
-                txdata  <= DLLP[DATA_WIDTH * step +: DATA_WIDTH];
-                txdatak <= DLLP_k[DATA_BYTES * step +: DATA_BYTES];
-                dllp_sent <= 1'b0;
-                dllp_initfc1_sent <= 1'b0;
-                dllp_initfc2_sent <= 1'b0;
-                step    <= step + 1;
-                initfc_step <= 0;
-            end else if ( step == NUMBER_OF_STEPS ) begin
-                txdata  <= DLLP[DATA_WIDTH * step +: DATA_WIDTH];
-                txdatak <= DLLP_k[DATA_BYTES * step +: DATA_BYTES];
-                dllp_sent <= 1'b1;
-                dllp_initfc1_sent <= 1'b0;
-                dllp_initfc2_sent <= 1'b0;
-                step    <= 0;
-                initfc_step <= 0;
-            end
-        end else if (initfc1_en) begin
-            if ( initfc_step != INITFC_NUMBER_OF_STEPS ) begin
-                txdata  <= DLLP_initfc1[DATA_WIDTH * initfc_step +: DATA_WIDTH];
-                txdatak <= DLLP_initfc1_k[DATA_BYTES * initfc_step +: DATA_BYTES];
-                dllp_sent <= 1'b0;
-                dllp_initfc1_sent <= 1'b0;
-                dllp_initfc2_sent <= 1'b0;
-                initfc_step <= initfc_step + 1;
-                step    <= 0;
-            end else if ( initfc_step == INITFC_NUMBER_OF_STEPS ) begin
-                txdata  <= DLLP_initfc1[DATA_WIDTH * initfc_step +: DATA_WIDTH];
-                txdatak <= DLLP_initfc1_k[DATA_BYTES * initfc_step +: DATA_BYTES];
-                dllp_sent <= 1'b0;
-                dllp_initfc1_sent <= 1'b1;
-                dllp_initfc2_sent <= 1'b0;
-                initfc_step <= 0;
-                step    <= 0;
-            end
-        end else if (initfc2_en) begin
-            if ( initfc_step != INITFC_NUMBER_OF_STEPS ) begin
-                txdata  <= DLLP_initfc2[DATA_WIDTH * initfc_step +: DATA_WIDTH];
-                txdatak <= DLLP_initfc2_k[DATA_BYTES * initfc_step +: DATA_BYTES];
-                dllp_sent <= 1'b0;
-                dllp_initfc1_sent <= 1'b0;
-                dllp_initfc2_sent <= 1'b0;
-                initfc_step <= initfc_step + 1;
-                step    <= 0;
-            end else if ( initfc_step == INITFC_NUMBER_OF_STEPS ) begin
-                txdata  <= DLLP_initfc2[DATA_WIDTH * initfc_step +: DATA_WIDTH];
-                txdatak <= DLLP_initfc2_k[DATA_BYTES * initfc_step +: DATA_BYTES];
-                dllp_sent <= 1'b0;
-                dllp_initfc1_sent <= 1'b0;
-                dllp_initfc2_sent <= 1'b1;
-                initfc_step <= 0;
-                step    <= 0;
-            end
-        end else if ( tlp_en ) begin
-            txdata  <= tx_data_TL;
-            txdatak <= {DATA_BYTES{1'b0}};
-            dllp_sent <= 1'b0;
-            dllp_initfc1_sent <= 1'b0;
-            dllp_initfc2_sent <= 1'b0;
-            step    <= 0;
-            initfc_step <= 0;
+    reg  [7:0] header_credit;
+    reg [11:0] data_credit_reg;
+    reg  [1:0] update_type_reg;
+    reg  [1:0] packet_type_reg;
+    reg        dllp_scheduled;
+
+    reg ack_scheduled;
+    reg nak_scheduled;
+    reg [11:0] nack_sequence_number;
+
+    always @(posedge clk) begin
+        if (reset) begin
+            tlp_scheduled_last <= 1'b0;
         end else begin
-            txdata  <= {DATA_WIDTH{1'b0}};
-            txdatak <= {DATA_BYTES{1'b0}};
-            dllp_sent <= 1'b0;
-            dllp_initfc1_sent <= 1'b0;
-            dllp_initfc2_sent <= 1'b0;
-            step    <= 0;
-            initfc_step <= 0;
+            tlp_scheduled_last <= tlp_scheduled;
         end
     end
 
-    crc_gen crc_inst (
+    always @(posedge clk) begin
+        if (reset) begin
+            tlp_available <= 1'b0;
+        end else begin
+            if (tlp_valid) begin
+                tlp_available <= 1'b1;
+            end else if ({tlp_scheduled, tlp_scheduled_last} == 2'b10) begin // negedge of tlp_scheduled detected
+                tlp_available <= 1'b0;
+            end
+        end
+    end
+
+    // Sorted after priority: ACK > NAK > DLLP > TLP
+    always @(posedge clk) begin
+        if (reset) begin
+            ack_sending  <= 1'b0;
+            nak_sending  <= 1'b0;
+            dllp_sending <= 1'b0;
+            tlp_sending  <= 1'b0;
+        end else begin
+            if (!ack_scheduled) begin
+                ack_sending <= 1'b0;
+            end else if (!nak_scheduled) begin
+                nak_sending <= 1'b0;
+            end else if (!dllp_scheduled) begin
+                dllp_sending <= 1'b0;
+            end else if (!tlp_available) begin
+                tlp_sending <= 1'b0;
+            end else if (ack_sending || nak_sending || dllp_sending || tlp_sending) begin
+                // Stay asserted until the last word is sent
+                // No new paket shall be sent
+            end else if (ack_scheduled) begin
+                ack_sending <= 1'b1;
+            end else if (nak_scheduled) begin
+                nak_sending <= 1'b1;
+            end else if (dllp_scheduled) begin
+                dllp_sending <= 1'b1;
+            end else if (tlp_available) begin
+                tlp_sending <= 1'b1;
+            end
+        end
+    end
+
+    always @(posedge clk) begin
+        if (reset) begin
+            header_credit   <= 0;
+            data_credit_reg <= 0;
+            update_type_reg <= 0;
+            packet_type_reg <= 0;
+            dllp_scheduled  <= 0;
+        end else begin
+            if (packet_avail) begin
+                header_credit   <= hdr_credit;
+                data_credit_reg <= data_credit;
+                update_type_reg <= update_type;
+                packet_type_reg <= packet_type;
+                dllp_scheduled  <= 1'b1;
+            end else if (dllp_sent) begin
+                if (dllp_sending) begin
+                    dllp_scheduled <= 1'b0;
+                end
+            end
+        end
+    end
+
+    always @(posedge clk) begin
+        if (reset) begin
+            ack_scheduled <= 1'b0;
+            nak_scheduled <= 1'b0;
+        end else if (ack_trigger) begin
+            ack_scheduled <= 1'b1;
+            nack_sequence_number <= ack_sequence_number;
+        end else if (nak_trigger) begin
+            nak_scheduled <= 1'b1;
+            nack_sequence_number <= nak_sequence_number;
+        end else if (dllp_sent) begin
+            if (ack_sending) begin
+                ack_scheduled <= 1'b0;
+            end else if (nak_sending) begin
+                nak_scheduled <= 1'b0;
+            end
+        end
+    end
+
+    wire initfc1_sent;
+    wire initfc2_sent;
+
+    always @(posedge clk) begin
+        if (reset) begin
+            dllp_initfc1_sent <= 1'b0;
+            dllp_initfc2_sent <= 1'b0;
+        end else begin
+            dllp_initfc1_sent <= initfc1_sent;
+            dllp_initfc2_sent <= initfc2_sent;
+        end
+    end
+
+    wire [DATA_WIDTH-1:0] dllp_tx_data;
+    wire [DATA_BYTES-1:0] dllp_tx_data_k;
+
+    send_DLLP #(
+        .DATA_BYTES(DATA_BYTES),
+        .PATTERN_WIDTH(PATTERN_WIDTH)
+    ) send_DLLP_inst (
         .clk(clk),
         .reset(reset),
-        .crc_en(1'b1),
-        .data_in(data[31:0]),
 
-        .calc_crc(calc_crc)
+        .virtual_channel(virtual_channel),
+        .hdr_credit(header_credit),
+        .data_credit(data_credit_reg),
+        .update_type(update_type_reg),
+        .packet_type(packet_type_reg),
+
+        .nack_sequence_number(nack_sequence_number),
+        .ack_trigger(ack_sending),
+        .nak_trigger(nak_sending),
+
+        .packet_avail(dllp_sending),
+
+        .initfc1_en(initfc1_en),
+        .initfc2_en(initfc2_en),
+
+        .dllp_initfc1_sent(initfc1_sent),
+        .dllp_initfc2_sent(initfc2_sent),
+        .dllp_sent(dllp_sent),
+        .txdata(dllp_tx_data),
+        .txdatak(dllp_tx_data_k)
     );
 
-    assign DLLP = {_END, calc_crc, data, dllp_type, SDP};
-    assign DLLP_k = {1'b1, 6'b0, 1'b1};
-    assign DLLP_initfc1 = {_END, 8'hbc, 8'h35, 8'hf0, 8'h03, 8'h08, 8'h40, SDP,
-                           _END, 8'hf6, 8'hb1, 8'h01, 8'h00, 8'h08, 8'h50, SDP,
-                           _END, 8'h92, 8'hd8, 8'h00, 8'h00, 8'h00, 8'h60, SDP};
-    assign DLLP_initfc1_k = {1'b1, 6'b0, 1'b1, 1'b1, 6'b0, 1'b1, 1'b1, 6'b0, 1'b1};
-    assign DLLP_initfc2 = {_END, 8'hc3, 8'h4f, 8'hf0, 8'h03, 8'h08, 8'hc0, SDP,
-                           _END, 8'h89, 8'hcb, 8'h01, 8'h00, 8'h08, 8'hd0, SDP,
-                           _END, 8'hed, 8'ha2, 8'h00, 8'h00, 8'h00, 8'he0, SDP};
-    assign DLLP_initfc2_k = {1'b1, 6'b0, 1'b1, 1'b1, 6'b0, 1'b1, 1'b1, 6'b0, 1'b1};
+    reg release_flag_reg;
+    reg retransmit_flag_reg;
+
+    always @(posedge clk) begin
+        if (reset) begin
+            release_flag_reg    <= 1'b0;
+            retransmit_flag_reg <= 1'b0;
+        end else begin
+            release_flag_reg    <= release_flag;
+            retransmit_flag_reg <= retransmit_flag;
+        end
+    end
+
+    wire empty;
+    wire full;
+
+    always @(posedge clk) begin
+        if (reset) begin
+            retry_buffer_empty <= 1'b1;
+            retry_buffer_full  <= 1'b0;
+        end else begin
+            retry_buffer_empty <= empty;
+            retry_buffer_full  <= full;
+        end
+    end
+
+    wire [DATA_WIDTH-1:0] tlp_tx_data;
+    wire [DATA_BYTES-1:0] tlp_tx_data_k;
+
+    retry_buffer #(
+        .DATA_BYTES(DATA_BYTES),
+        .BRAM_ADDR_WIDTH(9)
+    ) retry_buffer_inst (
+        .clk(clk),
+        .reset(reset),
+
+        .tlp_valid(tlp_valid),
+        .tlp_first(tlp_first),
+        .tlp_last(tlp_last),
+        .tlp_in_data(tlp_data),
+
+        .current_seq_num(),
+
+        .empty(empty),
+        .full(full),
+
+        .release_flag(release_flag_reg),
+        .retransmit_flag(retransmit_flag_reg),
+        .retransmit_seq_num(), // currently unused because retry buffer has size of one
+
+         // First word of TLP is sent, stay asserting until the last word is sent
+        .tlp_sending(tlp_sending),
+        // TLP is scheduled to be sent, stay asserting until the last word is sent
+        .tlp_scheduled(tlp_scheduled),
+        .tlp_out_data(tlp_tx_data),
+        .tlp_out_data_k(tlp_tx_data_k)
+    );
+
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            tx_data   <= {DATA_WIDTH{1'b0}};
+            tx_data_k <= {DATA_BYTES{1'b0}};
+        end else if (ack_sending || nak_sending || dllp_sending) begin
+            tx_data   <= dllp_tx_data;
+            tx_data_k <= dllp_tx_data_k;
+        end else if (tlp_sending) begin
+            tx_data   <= tlp_tx_data;
+            tx_data_k <= tlp_tx_data_k;
+        end else begin
+            tx_data   <= {DATA_WIDTH{1'b0}};
+            tx_data_k <= {DATA_BYTES{1'b0}};
+        end
+    end
 endmodule
