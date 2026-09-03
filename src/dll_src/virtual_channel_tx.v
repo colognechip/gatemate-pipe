@@ -8,6 +8,7 @@ module virtual_channel_tx #
 (
     input  wire                         clk,
     input  wire                         reset,
+    input  wire                         link_inactive,
 
     input  wire                   [2:0] virtual_channel,
     input  wire                   [7:0] hdr_credit,
@@ -23,7 +24,7 @@ module virtual_channel_tx #
     input  wire                         tlp_valid,
     input  wire                         tlp_first,
     input  wire                         tlp_last,
-    input  wire                         tlp_data,
+    input  wire        [DATA_WIDTH-1:0] tlp_data,
 
     input  wire                         release_flag,
     input  wire                         retransmit_flag,
@@ -47,14 +48,11 @@ module virtual_channel_tx #
 
     wire dllp_sent;
     wire tlp_scheduled;
-    reg  tlp_scheduled_last;
 
     reg ack_sending;
     reg nak_sending;
     reg dllp_sending;
     reg tlp_sending;
-
-    reg tlp_available;
 
     reg  [7:0] header_credit;
     reg [11:0] data_credit_reg;
@@ -66,27 +64,7 @@ module virtual_channel_tx #
     reg nak_scheduled;
     reg [11:0] nack_sequence_number;
 
-    always @(posedge clk) begin
-        if (reset) begin
-            tlp_scheduled_last <= 1'b0;
-        end else begin
-            tlp_scheduled_last <= tlp_scheduled;
-        end
-    end
-
-    always @(posedge clk) begin
-        if (reset) begin
-            tlp_available <= 1'b0;
-        end else begin
-            if (tlp_valid) begin
-                tlp_available <= 1'b1;
-            end else if ({tlp_scheduled, tlp_scheduled_last} == 2'b10) begin // negedge of tlp_scheduled detected
-                tlp_available <= 1'b0;
-            end
-        end
-    end
-
-    // Sorted after priority: ACK > NAK > DLLP > TLP
+    // Sorted after priority: NAK > ACK > DLLP > TLP
     always @(posedge clk) begin
         if (reset) begin
             ack_sending  <= 1'b0;
@@ -94,25 +72,27 @@ module virtual_channel_tx #
             dllp_sending <= 1'b0;
             tlp_sending  <= 1'b0;
         end else begin
-            if (!ack_scheduled) begin
-                ack_sending <= 1'b0;
-            end else if (!nak_scheduled) begin
-                nak_sending <= 1'b0;
-            end else if (!dllp_scheduled) begin
+            if (ack_sending  && !ack_scheduled)
+                ack_sending  <= 1'b0;
+            if (nak_sending  && !nak_scheduled)
+                nak_sending  <= 1'b0;
+            if (dllp_sending && !(ack_scheduled || nak_scheduled || dllp_scheduled))
                 dllp_sending <= 1'b0;
-            end else if (!tlp_available) begin
-                tlp_sending <= 1'b0;
-            end else if (ack_sending || nak_sending || dllp_sending || tlp_sending) begin
-                // Stay asserted until the last word is sent
-                // No new paket shall be sent
-            end else if (ack_scheduled) begin
-                ack_sending <= 1'b1;
-            end else if (nak_scheduled) begin
-                nak_sending <= 1'b1;
-            end else if (dllp_scheduled) begin
-                dllp_sending <= 1'b1;
-            end else if (tlp_available) begin
-                tlp_sending <= 1'b1;
+            if (tlp_sending  && !tlp_scheduled)
+                tlp_sending  <= 1'b0;
+
+            if (!(dllp_sending || tlp_sending)) begin
+                if (nak_scheduled) begin
+                    nak_sending  <= 1'b1;
+                    dllp_sending <= 1'b1;
+                end else if (ack_scheduled) begin
+                    ack_sending  <= 1'b1;
+                    dllp_sending <= 1'b1;
+                end else if (dllp_scheduled) begin
+                    dllp_sending <= 1'b1;
+                end else if (tlp_scheduled) begin
+                    tlp_sending <= 1'b1;
+                end
             end
         end
     end
@@ -232,6 +212,18 @@ module virtual_channel_tx #
     wire [DATA_WIDTH-1:0] tlp_tx_data;
     wire [DATA_BYTES-1:0] tlp_tx_data_k;
 
+    reg [11:0] current_seq_num;
+
+    always @(posedge clk) begin
+        if (reset) begin
+            current_seq_num <= 12'b0;
+        end else if (link_inactive) begin
+            current_seq_num <= 12'b0;
+        end else if (empty && tlp_valid && tlp_first) begin
+            current_seq_num <= current_seq_num + 1'b1;
+        end
+    end
+
     retry_buffer #(
         .DATA_BYTES(DATA_BYTES),
         .BRAM_ADDR_WIDTH(9)
@@ -244,7 +236,7 @@ module virtual_channel_tx #
         .tlp_last(tlp_last),
         .tlp_in_data(tlp_data),
 
-        .current_seq_num(),
+        .current_seq_num(current_seq_num),
 
         .empty(empty),
         .full(full),
@@ -265,7 +257,7 @@ module virtual_channel_tx #
         if (reset) begin
             tx_data   <= {DATA_WIDTH{1'b0}};
             tx_data_k <= {DATA_BYTES{1'b0}};
-        end else if (ack_sending || nak_sending || dllp_sending) begin
+        end else if (ack_sending || nak_sending || dllp_sending || initfc1_en || initfc2_en) begin
             tx_data   <= dllp_tx_data;
             tx_data_k <= dllp_tx_data_k;
         end else if (tlp_sending) begin

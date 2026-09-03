@@ -7,6 +7,7 @@ module tlp_rx_buffer #(
 )(
     input  wire                   clk,
     input  wire                   reset,
+    input  wire                   link_active,
 
     input  wire                   STP_detected,
     input  wire                   END_detected,
@@ -21,7 +22,7 @@ module tlp_rx_buffer #(
     output reg             [11:0] nak_seq_num,
     output reg                    ack_scheduled,
     output reg             [11:0] ack_seq_num,
-
+    output reg                    new_tlp_accepted,
     output reg   [DATA_WIDTH-1:0] rx_data_TL,
     output reg                    rx_tlp_valid,
     output reg                    rx_tlp_first,
@@ -160,14 +161,16 @@ module tlp_rx_buffer #(
             nak_seq_num         <= 12'b0;
             ack_scheduled       <= 1'b0;
             ack_seq_num         <= 12'b0;
+            new_tlp_accepted    <= 1'b0;
         end else begin
             nak_scheduled       <= 1'b0;
             ack_scheduled       <= 1'b0;
+            new_tlp_accepted    <= 1'b0;
 
             case (state)
 
                 IDLE: begin
-                    if (STP_detected) begin
+                    if (STP_detected && link_active) begin // only process TLP when link is active
                         // Check sequence number
                         if (sequence_number[11:0] == NEXT_RCV_SEQ) begin
                             write_ptr           <= 1; // first word has already been written in this cycle
@@ -175,6 +178,11 @@ module tlp_rx_buffer #(
                             sequence_number_reg <= sequence_number[11:0];
                             crc_state           <= crc_next;
                             state               <= STORE_TLP;
+                        end else if ((NEXT_RCV_SEQ - sequence_number[11:0]) <= 12'd2048) begin
+                            // (NEXT_RCV_SEQ - TLP Sequence Number) mod 4096 <= 2048, TLP is a duplicate, an ACK is scheduled.
+                            ack_scheduled <= 1'b1;
+                            ack_seq_num   <= NEXT_RCV_SEQ - 1'b1;
+                            state         <= DISCARD_TLP;
                         end else begin
                             nak_scheduled <= 1'b1;
                             nak_seq_num   <= NEXT_RCV_SEQ;
@@ -212,10 +220,11 @@ module tlp_rx_buffer #(
 
                 CHECK_CRC: begin
                     if (crc_computed == lcrc_reg) begin
-                        ack_scheduled <= 1'b1;
-                        ack_seq_num   <= sequence_number_reg;
-                        read_ptr      <= 0;
-                        state         <= PRE_WRITE;
+                        ack_scheduled    <= 1'b1; // TODO: issue ACK when AckNak_LATENCY_TIMER exceeds a default value
+                        ack_seq_num      <= sequence_number_reg;
+                        new_tlp_accepted <= 1'b1;
+                        read_ptr         <= 0;
+                        state            <= PRE_WRITE;
                     end else begin // crc wrong
                         nak_scheduled <= 1'b1;
                         //nak_seq_num <= sequence_number_reg;

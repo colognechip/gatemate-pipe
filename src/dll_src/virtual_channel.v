@@ -8,7 +8,7 @@ module virtual_channel #
     input  wire                         clk,
     input  wire                         reset,
     input  wire                         linkup,
-    input  wire                   [2:0] virtual_channel,
+    input  wire                   [2:0] virtual_channel_number,
     // Credits data from Transaction Layer
     input  wire                   [7:0] tx_hdr_credit,
     input  wire                  [11:0] tx_data_credit,
@@ -44,6 +44,11 @@ module virtual_channel #
     // FSM
     wire initfc1_en;
     wire initfc2_en;
+    wire [2:0] fsm_state;
+    localparam [2:0] DL_INACTIVE = 3'b000;
+    localparam [2:0] DL_ACTIVE   = 3'b011;
+    wire link_active = (fsm_state == DL_ACTIVE);
+    wire link_inactive = (fsm_state == DL_INACTIVE);
     // Tx side
     wire [DATA_WIDTH-1:0] txdata;
     wire [DATA_BYTES-1:0] txdatak;
@@ -130,6 +135,8 @@ module virtual_channel #
     ) vc_rx (
         .clk(clk),
         .reset(reset),
+        .link_active(link_active),
+        .link_inactive(link_inactive),
 
         .DLLP_data(data_DLLP),
         .SDP_detected(SDP_detected),
@@ -181,18 +188,24 @@ module virtual_channel #
             rx_dllp_valid    <= 1'b0;
             rx_hdr_credit    <= 8'b0;
             rx_data_credit   <= 12'b0;
-        end else if (crc_valid) begin
-            rx_update_type   <= update_type;
-            rx_packet_type   <= packet_type;
-            rx_dllp_valid    <= crc_valid;
-            rx_hdr_credit    <= hdrfc;
-            rx_data_credit   <= datafc;
+        end else begin
+            rx_dllp_valid <= 1'b0; 
+            if (crc_valid) begin
+                rx_update_type   <= update_type;
+                rx_packet_type   <= packet_type;
+                rx_dllp_valid    <= crc_valid;
+                rx_hdr_credit    <= hdrfc;
+                rx_data_credit   <= datafc;
+            end
         end
     end
 
     // Init sequence handling
     always @(posedge clk or posedge reset) begin
         if (reset) begin
+            initfc1_received_flag <= 3'b000;
+            initfc2_received_flag <= 3'b000;
+        end else if (fsm_state == DL_INACTIVE) begin
             initfc1_received_flag <= 3'b000;
             initfc2_received_flag <= 3'b000;
         end else if (crc_valid) begin
@@ -216,14 +229,20 @@ module virtual_channel #
         end
     end
 
-        always @(posedge clk or posedge reset) begin
+    always @(posedge clk or posedge reset) begin
         if (reset) begin
             initfc1_seq_received <= 1'b0;
             initfc2_seq_received <= 1'b0;
-        end else if (&initfc1_received_flag) begin
-            initfc1_seq_received <= 1'b1;
-        end else if (&initfc2_received_flag) begin
-            initfc2_seq_received <= 1'b1;
+        end else if (fsm_state == DL_INACTIVE) begin
+            initfc1_seq_received <= 1'b0;
+            initfc2_seq_received <= 1'b0;
+        end else begin
+            if (&initfc1_received_flag) begin
+                initfc1_seq_received <= 1'b1;
+            end
+            if (&initfc2_received_flag) begin
+                initfc2_seq_received <= 1'b1;
+            end
         end
     end
 
@@ -252,6 +271,8 @@ module virtual_channel #
             nak_received_flag <= 1'b0;
             acknak_seq_num    <= 12'b0;
         end else if (crc_valid) begin
+            ack_received_flag <= 1'b0;
+            nak_received_flag <= 1'b0;
             if ({packet_type, update_type} == 4'b0000) begin
                 ack_received_flag <= 1'b1;
                 acknak_seq_num    <= datafc;
@@ -270,15 +291,23 @@ module virtual_channel #
     // TODO: To virtual_channel_tx
     always @(posedge clk or posedge reset) begin
         if (reset) begin
-            ACKD_SEQ <= 12'b0;
+            ACKD_SEQ <= 12'hFFF;
+            tlp_released_flag       <= 1'b0;
+            tlp_retransmit_flag     <= 1'b0;
+        end else if (link_inactive) begin
+            ACKD_SEQ <= 12'hFFF;
             tlp_released_flag       <= 1'b0;
             tlp_retransmit_flag     <= 1'b0;
         end else if (ack_received_flag) begin
-            if (ACKD_SEQ < acknak_seq_num) begin
+            if ((acknak_seq_num - ACKD_SEQ) != 12'b0 && (acknak_seq_num - ACKD_SEQ) <= 12'd2048) begin
                 ACKD_SEQ <= acknak_seq_num; // Update acknowledged sequence number
                 tlp_released_flag   <= 1'b1;
                 tlp_retransmit_flag <= 1'b0;
-            end // TODO: What if wrong ACK is received? Should we ignore it or trigger a NAK?
+            end else begin
+                tlp_released_flag   <= 1'b0;
+                tlp_retransmit_flag <= 1'b0;
+            end
+            // TODO: What if wrong ACK is received? Should we ignore it or trigger a NAK?
         end else if (nak_received_flag) begin
             tlp_released_flag       <= 1'b0;
             tlp_retransmit_flag     <= 1'b1;
@@ -322,8 +351,9 @@ module virtual_channel #
     ) vc_tx (
         .clk(clk),
         .reset(reset),
+        .link_inactive(link_inactive),
 
-        .virtual_channel(virtual_channel),
+        .virtual_channel(virtual_channel_number),
         .hdr_credit(tx_hdr_credit),
         .data_credit(tx_data_credit),
         .update_type(tx_update_type),
@@ -362,7 +392,7 @@ module virtual_channel #
         if (reset) begin
             tx_tlp_ready <= 1'b0;
         end else begin
-            tx_tlp_ready <= retry_buffer_empty;
+            tx_tlp_ready <= retry_buffer_empty && (fsm_state == DL_ACTIVE); // ready when retry buffer is empty and FSM is in active state
         end
     end
 
@@ -389,7 +419,7 @@ module virtual_channel #
 
         .o_initfc1_en(initfc1_en),
         .o_initfc2_en(initfc2_en),
-        .o_fsm_state()
+        .o_fsm_state(fsm_state)
     );
 
 endmodule

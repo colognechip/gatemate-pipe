@@ -25,6 +25,7 @@ always@(posedge i_clk, posedge i_reset) begin
     else begin
         if (s_count >= max_count-1) begin
              o_flag  <= 1'b1;
+             s_count <= {BIT_WIDTH{1'b0}};
         end
         else begin
              o_flag  <= 1'b0;

@@ -7,6 +7,8 @@ module virtual_channel_rx #
 (
     input  wire                         clk,
     input  wire                         reset,
+    input  wire                         link_active,
+    input  wire                         link_inactive,
 
     input  wire     [PATTERN_WIDTH-1:0] DLLP_data,
     input  wire                         SDP_detected,
@@ -80,6 +82,7 @@ module virtual_channel_rx #
     wire [11:0] nak_seq_number;
     wire ack_scheduled;
     wire [11:0] ack_seq_number;
+    wire new_tlp_accepted;
 
     reg  [11:0] NEXT_RCV_SEQ;
 
@@ -100,7 +103,9 @@ module virtual_channel_rx #
     always @(posedge clk or posedge reset) begin
         if (reset) begin
             NEXT_RCV_SEQ <= 12'b0;
-        end else if (ack_scheduled) begin
+        end else if (link_inactive) begin
+            NEXT_RCV_SEQ <= 12'b0;
+        end else if (new_tlp_accepted) begin
             NEXT_RCV_SEQ <= NEXT_RCV_SEQ + 1;
         end
     end
@@ -111,6 +116,7 @@ module virtual_channel_rx #
     ) tlp_rx_buffer_inst (
         .clk(clk),
         .reset(reset),
+        .link_active(link_active),
 
         .STP_detected(STP_detected),
         .END_detected(END_detected),
@@ -125,6 +131,7 @@ module virtual_channel_rx #
         .nak_seq_num(nak_seq_number),
         .ack_scheduled(ack_scheduled),
         .ack_seq_num(ack_seq_number),
+        .new_tlp_accepted(new_tlp_accepted),
 
         .rx_data_TL(tlp_data_w),
         .rx_tlp_valid(tlp_valid_w),

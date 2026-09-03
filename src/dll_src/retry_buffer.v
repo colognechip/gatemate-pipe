@@ -29,7 +29,7 @@ module retry_buffer #(
 );
 
     // K characters
-    localparam  SDP = 8'h5C;
+    localparam  STP = 8'hFB;
     localparam _END = 8'hFD;
 
     reg [DATA_WIDTH-1:0] retry_buffer [DEPTH-1:0];
@@ -38,7 +38,6 @@ module retry_buffer #(
     reg [BRAM_ADDR_WIDTH-1:0] read_ptr;
     reg [BRAM_ADDR_WIDTH-1:0] word_cnt;
     reg [BRAM_ADDR_WIDTH-1:0] read_cnt;
-    reg [DATA_WIDTH-1:0]      buffer_data;
 
     reg [2:0] state;
 
@@ -54,10 +53,10 @@ module retry_buffer #(
     assign full  = (state != IDLE);
 
     assign tlp_out_data = ((state == WRITE_START) || (state == SEND_TLP))
-                          ? buffer_data : {DATA_WIDTH{1'b0}};
+                          ? retry_buffer[read_ptr] : {DATA_WIDTH{1'b0}};
 
     assign tlp_out_data_k = (state == WRITE_START)
-                            ? {{(DATA_BYTES-1){1'b0}}, 1'b1} : (state == SEND_TLP && read_cnt == word_cnt)
+                            ? {{(DATA_BYTES-1){1'b0}}, 1'b1} : (state == SEND_TLP && read_cnt == word_cnt - 1)
                             ? {1'b1, {(DATA_BYTES-1){1'b0}}} : {DATA_BYTES{1'b0}};
 
     // CRC also takes sequence number into account
@@ -115,17 +114,34 @@ module retry_buffer #(
         end
     endgenerate
 
+    // Needed in case the first payload is also the last payload
+    // We need crc output in the same cycle as the first payload
+    wire [LFSR_WIDTH-1:0] crc_computed_next;
+    genvar m;
+    generate
+        for (m = 0; m < 8; m = m + 1) begin : compute_lcrc_next
+            assign crc_computed_next[m]    = ~crc_next[7-m];
+            assign crc_computed_next[m+8]  = ~crc_next[15-m];
+            assign crc_computed_next[m+16] = ~crc_next[23-m];
+            assign crc_computed_next[m+24] = ~crc_next[31-m];
+        end
+    endgenerate
+
     // Write port
     generate
         if ( DATA_WIDTH == 64 ) begin : retry_buffer_64
             always @(posedge clk) begin
                 if ((state == IDLE && tlp_first) && tlp_valid) begin
-                    retry_buffer[0]                  <= {tlp_in_data[39:0], current_seq_num[7:0], {4'b0, current_seq_num[11:8]}, SDP};
+                    retry_buffer[0]                  <= {tlp_in_data[39:0], current_seq_num[7:0], {4'b0, current_seq_num[11:8]}, STP};
                     retry_buffer[1][23:0]            <= tlp_in_data[63:40];
+                    if (tlp_last) begin
+                        retry_buffer[1][55:24]       <= {crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16], crc_computed_next[31:24]};
+                        retry_buffer[1][63:56]       <= _END;
+                    end
                 end else if ((state == STORE_TLP && tlp_last) && tlp_valid) begin
                     retry_buffer[write_ptr-1][63:24] <= tlp_in_data[39:0];
                     retry_buffer[write_ptr][23:0]    <= tlp_in_data[63:40];
-                    retry_buffer[write_ptr][55:24]   <= {crc_computed[7:0], crc_computed[15:8], crc_computed[23:16], crc_computed[31:24]};
+                    retry_buffer[write_ptr][55:24]   <= {crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16], crc_computed_next[31:24]};
                     retry_buffer[write_ptr][63:56]   <= _END;
                 end else if (state == STORE_TLP && tlp_valid) begin
                     retry_buffer[write_ptr-1][63:24] <= tlp_in_data[39:0];
@@ -135,13 +151,17 @@ module retry_buffer #(
         end else if (DATA_WIDTH == 32) begin : retry_buffer_32
             always @(posedge clk) begin
                 if ((state == IDLE && tlp_first) && tlp_valid) begin
-                    retry_buffer[0]                  <= {tlp_in_data[7:0], current_seq_num[7:0], {4'b0, current_seq_num[11:8]}, SDP};
+                    retry_buffer[0]                  <= {tlp_in_data[7:0], current_seq_num[7:0], {4'b0, current_seq_num[11:8]}, STP};
                     retry_buffer[1][23:0]            <= tlp_in_data[31:8];
+                    if (tlp_last) begin
+                        retry_buffer[1][31:24]       <= crc_computed_next[31:24];
+                        retry_buffer[2][31:0]        <= {_END, crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16]};
+                    end
                 end else if ((state == STORE_TLP && tlp_last) && tlp_valid) begin
                     retry_buffer[write_ptr-1][31:24] <= tlp_in_data[7:0];
                     retry_buffer[write_ptr][23:0]    <= tlp_in_data[31:8];
-                    retry_buffer[write_ptr][31:24]   <= crc_computed[31:24];
-                    retry_buffer[write_ptr+1][31:0]  <= {_END, crc_computed[7:0], crc_computed[15:8], crc_computed[23:16]};
+                    retry_buffer[write_ptr][31:24]   <= crc_computed_next[31:24];
+                    retry_buffer[write_ptr+1][31:0]  <= {_END, crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16]};
                 end else if (state == STORE_TLP && tlp_valid) begin
                     retry_buffer[write_ptr-1][31:24] <= tlp_in_data[7:0];
                     retry_buffer[write_ptr][23:0]    <= tlp_in_data[31:8];
@@ -149,11 +169,6 @@ module retry_buffer #(
             end
         end
     endgenerate
-
-    // Read port
-    always @(posedge clk) begin
-        buffer_data <= retry_buffer[read_ptr];
-    end
 
     // FSM
     always @(posedge clk or posedge reset) begin
@@ -165,20 +180,22 @@ module retry_buffer #(
             word_cnt      <= 0;
             tlp_scheduled <= 1'b0;
             lcrc_reg      <= {LFSR_WIDTH{1'b0}};
+            crc_state     <= {LFSR_WIDTH{1'b1}};
         end else begin
             case (state)
 
                 IDLE: begin
                     if (tlp_valid && tlp_first) begin
                         write_ptr <= 2;
-                        word_cnt  <= 2; // Extra word for sequence number and SDP
+                        crc_state <= crc_next;
                         if (tlp_last) begin // First is last
                             read_ptr <= 0;
                             state    <= PRE_WRITE;
+                            word_cnt <= (DATA_WIDTH == 32) ? 3 : 2; // 32-bit datapath needs two extra words in total (one already added at the beginning)
                         end else begin
                             state    <= STORE_TLP;
+                            word_cnt <= 2;
                         end
-                        crc_state <= crc_next;
                     end
                 end
                 
@@ -211,6 +228,7 @@ module retry_buffer #(
                         tlp_scheduled <= 1'b0;
                         write_ptr     <= 0;
                         word_cnt      <= 0;
+                        crc_state     <= {LFSR_WIDTH{1'b1}};
                         state         <= IDLE;
                     // We want to wait for the TLP to be allowed to be sent before moving to next state
                     end else if (tlp_sending) begin
@@ -226,7 +244,7 @@ module retry_buffer #(
                 end
 
                 SEND_TLP: begin
-                    if (read_cnt == word_cnt) begin
+                    if (read_cnt == word_cnt - 1) begin
                         tlp_scheduled <= 1'b0;
                         read_cnt      <= 0;
                         state         <= TLP_SENT;
@@ -244,6 +262,7 @@ module retry_buffer #(
                     if (release_flag) begin
                         write_ptr <= 0;
                         word_cnt  <= 0;
+                        crc_state <= {LFSR_WIDTH{1'b1}};
                         state     <= IDLE;
                     // Retransmit the packet
                     // TODO: Add a counter for the retransmission

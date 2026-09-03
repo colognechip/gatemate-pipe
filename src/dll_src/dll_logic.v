@@ -52,7 +52,7 @@ module dll_logic #
                 .clk(phy_clk),
                 .reset(phy_reset),
                 .linkup(phy_linkup),
-                .virtual_channel(i[2:0]),
+                .virtual_channel_number(i[2:0]),
 
                 .tx_hdr_credit(tl_tx_hdr_credit),
                 .tx_data_credit(tl_tx_data_credit),

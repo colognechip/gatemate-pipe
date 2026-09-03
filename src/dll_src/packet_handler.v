@@ -107,8 +107,8 @@ module packet_handler #(
                         data_TL           <= {{(DATA_WIDTH/2){1'b0}}, rx_data_shift[NUMBER_OF_STEPS-1][23:0], rx_data_shift[NUMBER_OF_STEPS][63:56]};
                         tlp_valid         <= 1'b1;
                     end else begin
-                        data_TL           <= {DATA_WIDTH{1'b0}};
-                        tlp_valid         <= 1'b0;
+                        data_TL           <= {rx_data_shift[NUMBER_OF_STEPS-1][23:0], rx_data_shift[NUMBER_OF_STEPS][63:24]};
+                        tlp_valid         <= 1'b1;
                     end
                     lcrc              <= {rx_data_shift[NUMBER_OF_STEPS-1][31:24], rx_data_shift[NUMBER_OF_STEPS-1][39:32], rx_data_shift[NUMBER_OF_STEPS-1][47:40], rx_data_shift[NUMBER_OF_STEPS-1][55:48]};
                     K_POS             <= 1'b0;

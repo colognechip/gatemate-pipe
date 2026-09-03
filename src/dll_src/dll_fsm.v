@@ -13,7 +13,7 @@ module dll_fsm #(
 
    output reg                   o_initfc1_en,               // Enable InitFC1 Transmission
    output reg                   o_initfc2_en,               // Enable InitFC2 Transmission
-   output wire                  o_fsm_state                 // Current FSM State
+   output wire            [2:0] o_fsm_state                 // Current FSM State
    );
 
    reg [2:0] s_state, s_next_state;
@@ -28,7 +28,7 @@ module dll_fsm #(
    //State Register
    always @(posedge i_clk, posedge reset) begin
       if ( reset )
-         s_state <= DL_ACTIVE;
+         s_state <= DL_INACTIVE;
       else 
          s_state <= s_next_state;
    end
