@@ -55,7 +55,7 @@ module ccfpga_LTSSM_fsm #(
                      POLLING_CONFIG                  = 5'b00011,
                      CONFIG_LINKWIDTH_START          = 5'b00100,
                      CONFIG_LINKWIDTH_ACCEPT         = 5'b00101,
-                     CONFIG_LANENUM_WAIT             = 5'b00110,
+                     CONFIG_LANENUM_WAIT             = 5'b00110, // not used for x1 Lane
                      CONFIG_LANENUM_ACCEPT           = 5'b00111,
                      CONFIG_COMPLETE                 = 5'b01000,
                      CONFIG_IDLE                     = 5'b01001,
@@ -63,7 +63,7 @@ module ccfpga_LTSSM_fsm #(
                      RECOVERY_RCVRLOCK               = 5'b01011,
                      PRE_CONFIG_LINKWIDTH_START      = 5'b01100,
                      PRE_CONFIG_LINKWIDTH_ACCEPT     = 5'b01101,
-                     PRE_CONFIG_LANENUM_WAIT         = 5'b01110,
+                     PRE_CONFIG_LANENUM_WAIT         = 5'b01110, // not used for x1 Lane
                      PRE_CONFIG_LANENUM_ACCEPT       = 5'b01111,
                      PRE_CONFIG_COMPLETE             = 5'b10000,
                      PRE_CONFIG_IDLE                 = 5'b10001,
@@ -74,7 +74,12 @@ module ccfpga_LTSSM_fsm #(
                      PRE_L0                          = 5'b10110,
                      PRE_RECOVERY_RCVRLOCK           = 5'b10111,
                      PRE_RECOVERY_RCVRCFG            = 5'b11000,
-                     PRE_RECOVERY_IDLE               = 5'b11001;
+                     PRE_RECOVERY_IDLE               = 5'b11001,
+                     PRE_DETECT_ACTIVE               = 5'b11010,
+                     PRE_DETECT_QUIET                = 5'b11011,
+                     PRE_POLLING_CONFIG              = 5'b11100,
+                     PRE_CONFIG_LINKWIDTH_START_CNT  = 5'b11101,
+                     PRE_CONFIG_LINKWIDTH_ACCEPT_CNT = 5'b11110;
 
 
    //State Register
@@ -91,53 +96,74 @@ module ccfpga_LTSSM_fsm #(
       case ( s_state )
          DETECT_QUIET : begin
             if ( s_timeout == 1'b1 | i_RxElecIdle == 1'b0 )
-               s_next_state = DETECT_ACTIVE;
+               s_next_state = PRE_DETECT_ACTIVE;
             else
                s_next_state = DETECT_QUIET;
+         end
+         PRE_DETECT_ACTIVE : begin
+            s_next_state = DETECT_ACTIVE;
+         end
+         PRE_DETECT_QUIET : begin
+            s_next_state = DETECT_QUIET;
          end
          DETECT_ACTIVE : begin
             if ( i_RxStatus == 3'b011 )
                s_next_state = POLLING_ACTIVE;
+            else if ( s_timeout == 1'b1 )
+               s_next_state = PRE_DETECT_QUIET;
             else
                s_next_state = DETECT_ACTIVE;
          end
          POLLING_ACTIVE : begin
             if ( (s_rx_flag == 1'b1) && (s_polling_active_tx_flag == 1'b1) )
-               s_next_state = POLLING_CONFIG;
+               s_next_state = PRE_POLLING_CONFIG;
             else if ( s_timeout == 1'b1 )
-               s_next_state = DETECT_QUIET;
+               s_next_state = PRE_DETECT_QUIET;
+         end
+         PRE_POLLING_CONFIG : begin
+            s_next_state = POLLING_CONFIG;
          end
          POLLING_CONFIG : begin
             if ( (s_rx_flag == 1'b1) && (s_tx_flag == 1'b1) )
                s_next_state = PRE_CONFIG_LINKWIDTH_START;
             else if ( s_timeout == 1'b1 )
-               s_next_state = DETECT_QUIET;
+               s_next_state = PRE_DETECT_QUIET;
          end
          PRE_CONFIG_LINKWIDTH_START : begin
             s_next_state = CONFIG_LINKWIDTH_START_LINKNUM;
          end
          CONFIG_LINKWIDTH_START_LINKNUM : begin
             if ( s_link_detected == 1'b1 )
-               s_next_state = CONFIG_LINKWIDTH_START;
+               s_next_state = PRE_CONFIG_LINKWIDTH_START_CNT;
+            else if ( s_timeout == 1'b1 )
+               s_next_state = PRE_DETECT_QUIET;
+         end
+         PRE_CONFIG_LINKWIDTH_START_CNT : begin
+            s_next_state = CONFIG_LINKWIDTH_START;
          end
          CONFIG_LINKWIDTH_START : begin
             if ( s_rx_flag == 1'b1 )
                s_next_state = PRE_CONFIG_LINKWIDTH_ACCEPT;
             else if ( s_timeout == 1'b1 )
-               s_next_state = DETECT_QUIET;
+               s_next_state = PRE_DETECT_QUIET;
          end
          PRE_CONFIG_LINKWIDTH_ACCEPT : begin
             s_next_state = CONFIG_LINKWIDTH_ACCEPT_LANENUM;
          end
          CONFIG_LINKWIDTH_ACCEPT_LANENUM : begin
             if ( s_lane_detected == 1'b1 )
-               s_next_state = CONFIG_LINKWIDTH_ACCEPT;
+               s_next_state = PRE_CONFIG_LINKWIDTH_ACCEPT_CNT;
+            else if ( s_timeout == 1'b1 )
+               s_next_state = PRE_DETECT_QUIET;
+         end
+         PRE_CONFIG_LINKWIDTH_ACCEPT_CNT : begin
+            s_next_state = CONFIG_LINKWIDTH_ACCEPT;
          end
          CONFIG_LINKWIDTH_ACCEPT : begin
             if ( s_rx_flag == 1'b1 )
                s_next_state = PRE_CONFIG_LANENUM_ACCEPT;
             else if ( s_timeout == 1'b1 )
-               s_next_state = DETECT_QUIET;
+               s_next_state = PRE_DETECT_QUIET;
          end
          PRE_CONFIG_LANENUM_ACCEPT : begin
             s_next_state = CONFIG_LANENUM_ACCEPT;
@@ -146,16 +172,13 @@ module ccfpga_LTSSM_fsm #(
             if ( s_rx_flag == 1'b1 )
                s_next_state = PRE_CONFIG_LANENUM_ACCEPT;
             else if ( s_timeout == 1'b1 )
-               s_next_state = DETECT_QUIET;
-         end
-         PRE_CONFIG_LANENUM_ACCEPT : begin
-            s_next_state = CONFIG_LANENUM_ACCEPT;
+               s_next_state = PRE_DETECT_QUIET;
          end
          CONFIG_LANENUM_ACCEPT : begin
             if ( s_rx_flag == 1'b1 )
                s_next_state = PRE_CONFIG_COMPLETE;
             else if ( s_timeout == 1'b1 )
-               s_next_state = DETECT_QUIET;
+               s_next_state = PRE_DETECT_QUIET;
          end
          PRE_CONFIG_COMPLETE : begin
             s_next_state = CONFIG_COMPLETE;
@@ -164,7 +187,7 @@ module ccfpga_LTSSM_fsm #(
             if ( (s_rx_flag == 1'b1) && (s_tx_flag == 1'b1) )
                s_next_state = PRE_CONFIG_IDLE;
             else if ( s_timeout == 1'b1 )
-               s_next_state = DETECT_QUIET;
+               s_next_state = PRE_DETECT_QUIET;
          end
          PRE_CONFIG_IDLE : begin
             s_next_state = CONFIG_IDLE;
@@ -173,7 +196,7 @@ module ccfpga_LTSSM_fsm #(
             if ( (s_rx_flag == 1'b1) && (s_tx_flag == 1'b1) )
                s_next_state = PRE_L0;
             else if ( s_timeout == 1'b1 )
-               s_next_state = DETECT_QUIET;
+               s_next_state = PRE_DETECT_QUIET;
          end
          PRE_L0 : begin
             s_next_state = L0;
@@ -189,7 +212,7 @@ module ccfpga_LTSSM_fsm #(
             if ( s_rx_flag == 1'b1 )
                s_next_state = PRE_RECOVERY_RCVRCFG;
             else if ( s_timeout == 1'b1 )
-               s_next_state = DETECT_QUIET;
+               s_next_state = PRE_DETECT_QUIET;
          end
          PRE_RECOVERY_RCVRCFG : begin
             s_next_state = RECOVERY_RCVRCFG;
@@ -200,7 +223,7 @@ module ccfpga_LTSSM_fsm #(
             else if ( (s_recovery_cfg_rx_flag == 1'b1) && (s_tx_flag == 1'b1) ) // Received 2 consecutive TS1 with PAD-Lane
                s_next_state = PRE_CONFIG_LINKWIDTH_START;
             else if ( s_timeout == 1'b1 )
-               s_next_state = DETECT_QUIET;
+               s_next_state = PRE_DETECT_QUIET;
          end
          PRE_RECOVERY_IDLE : begin
             s_next_state = RECOVERY_IDLE;
@@ -211,7 +234,7 @@ module ccfpga_LTSSM_fsm #(
             else if ( s_recovery_idle_rx_flag == 1'b1 ) // Received 2 consecutive TS1 with PAD-Lane
                s_next_state = PRE_CONFIG_LINKWIDTH_START;
             else if ( s_timeout == 1'b1 )
-               s_next_state = DETECT_QUIET;
+               s_next_state = PRE_DETECT_QUIET;
          end
       endcase
    end
@@ -239,15 +262,25 @@ module ccfpga_LTSSM_fsm #(
             o_TxElecIdle      = 1'b1;
             s_clk_timeout_rst = 1'b0;  // Start counting 12ms
          end
+         PRE_DETECT_ACTIVE : begin
+            o_TxElecIdle      = 1'b1;
+         end
+         PRE_DETECT_QUIET : begin
+            o_TxElecIdle      = 1'b1;
+         end
          DETECT_ACTIVE : begin
-            o_TxDetectRx = 1'b1;
-            o_TxElecIdle = 1'b1;
+            o_TxDetectRx      = 1'b1;
+            o_TxElecIdle      = 1'b1;
+            s_clk_timeout_rst = 1'b0;  // Start counting 12ms
          end
          POLLING_ACTIVE : begin
             s_send_OS_trigger            = 1'b1;
             s_rx_flag_rst                = 1'b0;
             s_polling_active_tx_flag_rst = 1'b0;
             s_clk_timeout_rst            = 1'b0; // Start counting 24ms
+         end
+         PRE_POLLING_CONFIG : begin
+            s_send_OS_trigger = 1'b1;
          end
          POLLING_CONFIG : begin
             s_send_OS_trigger            = 1'b1;
@@ -257,6 +290,7 @@ module ccfpga_LTSSM_fsm #(
          end
          CONFIG_LINKWIDTH_START_LINKNUM : begin
             s_link_detected_rst          = 1'b0;
+            s_clk_timeout_rst            = 1'b0; // Start counting 24ms
          end
          CONFIG_LINKWIDTH_START : begin
             s_send_OS_trigger            = 1'b1;
@@ -265,6 +299,7 @@ module ccfpga_LTSSM_fsm #(
          end
          CONFIG_LINKWIDTH_ACCEPT_LANENUM : begin
             s_lane_detected_rst          = 1'b0;
+            s_clk_timeout_rst            = 1'b0; // Start counting 2ms
          end
          CONFIG_LINKWIDTH_ACCEPT : begin
             s_send_OS_trigger            = 1'b1;
@@ -303,13 +338,13 @@ module ccfpga_LTSSM_fsm #(
          RECOVERY_RCVRLOCK : begin
             s_send_OS_trigger            = 1'b1;
             s_rx_flag_rst                = 1'b0;
-            s_recovery_cfg_rx_flag_rst   = 1'b0;
             s_clk_timeout_rst            = 1'b0; // Start counting 24ms
          end
          RECOVERY_RCVRCFG : begin
             s_send_OS_trigger            = 1'b1;
             s_rx_flag_rst                = 1'b0;
             s_tx_flag_rst                = 1'b0;
+            s_recovery_cfg_rx_flag_rst   = 1'b0;
             s_clk_timeout_rst            = 1'b0; // Start counting 48ms
          end
          RECOVERY_IDLE : begin

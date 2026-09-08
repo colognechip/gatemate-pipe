@@ -161,7 +161,7 @@ module ccfpga_tx_MAC #(
       end else if ( sending_OS ) begin
          txdata_reg  <= txdata_OS;
          txdatak_reg <= txdatak_OS;
-      end else if ( send_IDLE_trigger ) begin
+      end else if ( sending_IDLE ) begin
          txdata_reg  <= txdata_IDLE;
          txdatak_reg <= txdatak_IDLE;
       end else if ( sending_SKP ) begin

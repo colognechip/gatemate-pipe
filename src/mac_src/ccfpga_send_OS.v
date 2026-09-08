@@ -84,8 +84,10 @@ module ccfpga_send_OS #(
       end
    end
 
-   assign pattern = OS_type == 1'b0 ? {{10{ID1}}, received_Ctrl, 8'h02, 8'h04, received_Lane, received_Link, COM} :
-                                      {{10{ID2}}, received_Ctrl, 8'h02, 8'h04, received_Lane, received_Link, COM};
+   /*assign pattern = OS_type == 1'b0 ? {{10{ID1}}, received_Ctrl, 8'h02, 8'h04, received_Lane, received_Link, COM} :
+                                      {{10{ID2}}, received_Ctrl, 8'h02, 8'h04, received_Lane, received_Link, COM};*/
+   assign pattern = OS_type == 1'b0 ? {{10{ID1}}, received_Ctrl, 8'h02, 8'h00, received_Lane, received_Link, COM} :
+                                      {{10{ID2}}, received_Ctrl, 8'h02, 8'h00, received_Lane, received_Link, COM};
    assign PAD_link = received_Link == PAD;
    assign PAD_lane = received_Lane == PAD;
    assign pattern_k = {{13'b0}, PAD_lane, PAD_link, 1'b1};

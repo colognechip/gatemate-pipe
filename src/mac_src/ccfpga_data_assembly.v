@@ -35,6 +35,10 @@ module ccfpga_data_assembly #(
         end
     end
 
+    // Note: this design is a bit overkilled as the current SerDes setup aligns the COM
+    // to the first or the fifth byte for 64 bit data width and always to the first byte for 32 bit or narrower.
+    // However, this design can handle any COM position and is more robust to potential future changes in SerDes alignment.
+
     generate
         if ( DATA_WIDTH == 64 ) begin
             always @ (posedge clk or posedge reset) begin

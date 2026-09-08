@@ -123,8 +123,13 @@ module ccfpga_LTSSM_logic #(
 
    assign s_tx_OS_flag_rst   = !idle_state ? s_tx_flag_rst : 1'b1;   // Tx OS counting when not in IDLE state
    assign s_tx_IDLE_flag_rst = idle_state ? s_tx_flag_rst : 1'b1;    // Tx IDLE counting when in IDLE state
-   assign o_PowerDown = s_fsm_state == 5'b00000 ? 2'b10 : s_fsm_state == 5'b00001 ? 2'b10 : 2'b00; // Power Down signal to SerDes
-   assign o_LinkUp = s_fsm_state == 5'b01010 ? 1'b1 : s_fsm_state == 5'b01001 ? 1'b1 : 1'b0;       // Link Up enabled in L0 or CONFIG_IDLE
+   assign o_PowerDown = s_fsm_state == 5'b00000 ? 2'b10 :
+                        s_fsm_state == 5'b00001 ? 2'b10 :
+                        s_fsm_state == 5'b11010 ? 2'b10 :
+                        s_fsm_state == 5'b11011 ? 2'b10 : 2'b00; // Power Down signal to SerDes
+   assign o_LinkUp = s_fsm_state == 5'b01010 ? 1'b1 :
+                     s_fsm_state == 5'b01001 ? 1'b1 :
+                     s_fsm_state == 5'b10110 ? 1'b1 : 1'b0;       // Link Up enabled in L0 or CONFIG_IDLE (incl. PRE_L0 pass-through)
    assign s_rx_flag = ((s_rx_flag_OS && !idle_state) || (s_rx_flag_IDLE && idle_state));       // Rx flag
    assign s_tx_flag = (s_tx_flag_OS && !idle_state) || (s_tx_flag_IDLE && idle_state);         // Tx flag
    // Rx reset when:
@@ -154,7 +159,8 @@ module ccfpga_LTSSM_logic #(
                          s_fsm_state == 5'b10011 ? 4'b0001 :
                          s_fsm_state == 5'b01011 ? 4'b1000 :
                          s_fsm_state == 5'b10100 ? 4'b1000 :
-                         s_fsm_state == 5'b10101 ? 4'b1000 : 4'b1111;
+                         s_fsm_state == 5'b10101 ? 4'b1000 :
+                         s_fsm_state == 5'b01010 ? 4'b0010 : 4'b1111;
    // TS1 Ordered Set pattern enable
    assign TS1_pattern_en = s_fsm_state == 5'b00010 ? 1'b1 :
                            s_fsm_state == 5'b00011 ? 1'b0 :
@@ -168,7 +174,8 @@ module ccfpga_LTSSM_logic #(
                            s_fsm_state == 5'b10011 ? 1'b1 :
                            s_fsm_state == 5'b01011 ? 1'b1 :
                            s_fsm_state == 5'b10100 ? 1'b0 :
-                           s_fsm_state == 5'b10101 ? 1'b0 : 1'b0;
+                           s_fsm_state == 5'b10101 ? 1'b0 :
+                           s_fsm_state == 5'b01010 ? 1'b1 : 1'b0;
    // TS2 Ordered Set pattern enable
    assign TS2_pattern_en = s_fsm_state == 5'b00010 ? 1'b1 :
                            s_fsm_state == 5'b00011 ? 1'b1 :
@@ -200,6 +207,7 @@ module ccfpga_LTSSM_logic #(
                            s_fsm_state == 5'b10100 ? 1'b1 : 1'b0;
    // Max count for timeout at each state
    assign clk_max_count = s_fsm_state == 5'b00000 ? 12*1000000 / CYCLE_TIME : //12ms
+                          s_fsm_state == 5'b00001 ? 12*1000000 / CYCLE_TIME : //12ms
                           s_fsm_state == 5'b00010 ? 24*1000000 / CYCLE_TIME : //24ms
                           s_fsm_state == 5'b00011 ? 48*1000000 / CYCLE_TIME : //48ms
                           s_fsm_state == 5'b00100 ? 24*1000000 / CYCLE_TIME : //24ms
@@ -209,7 +217,9 @@ module ccfpga_LTSSM_logic #(
                           s_fsm_state == 5'b01001 ?  2*1000000 / CYCLE_TIME : //2ms
                           s_fsm_state == 5'b01011 ? 24*1000000 / CYCLE_TIME : //24ms
                           s_fsm_state == 5'b10100 ? 48*1000000 / CYCLE_TIME : //48ms
-                          s_fsm_state == 5'b10101 ?  2*1000000 / CYCLE_TIME : 2*1000000 / CYCLE_TIME; //2ms
+                          s_fsm_state == 5'b10101 ?  2*1000000 / CYCLE_TIME : //2ms
+                          s_fsm_state == 5'b10010 ? 24*1000000 / CYCLE_TIME : //24ms
+                          s_fsm_state == 5'b10011 ?  2*1000000 / CYCLE_TIME : 2*1000000 / CYCLE_TIME; //2ms
 //-------------------------------------------------------------------------------------------------------------------------------
 // Timeout enable and timeout signal
    assign s_timeout_clk_en = s_fsm_state == 5'b00111 ? 1'b0 : 1'b1;

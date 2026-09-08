@@ -22,8 +22,7 @@ module ccfpga_SKP_generator #(
     );
 
     localparam COUNT_MIN   = (1180 - 1)/DATA_BYTES + 1;
-    localparam COUNT_MAX   = (1538 - 1)/DATA_BYTES + 1;
-    localparam COUNT_WIDTH = $clog2(COUNT_MAX) + 1;
+    localparam COUNT_WIDTH = $clog2(COUNT_MIN) + 1;
 
     reg             [3:0] number_of_queued_SKP;
     reg [COUNT_WIDTH-1:0] s_count;
@@ -40,7 +39,7 @@ module ccfpga_SKP_generator #(
             s_count     <= {COUNT_WIDTH{1'b0}};
         end
         else begin
-            if (s_count == COUNT_MAX) begin
+            if (s_count == COUNT_MIN) begin
                 s_count <= 0;
             end
             else begin
@@ -117,7 +116,7 @@ module ccfpga_SKP_generator #(
                     step_count           <= 0;
                 end else if (SKP_send_enable) begin
                     if (step_count < (NUMBER_OF_STEP - 1)) begin
-                        txdata               <= SKP_OS[step_count*DATA_WIDTH - 1 +: DATA_WIDTH];
+                        txdata               <= SKP_OS[step_count*DATA_WIDTH +: DATA_WIDTH];
                         txdatak              <= {DATA_BYTES{1'b1}};
                         sending_SKP          <= 1'b1;
                         if (SKP_count_inc)
@@ -126,7 +125,7 @@ module ccfpga_SKP_generator #(
                             number_of_queued_SKP <= number_of_queued_SKP;
                         step_count           <= step_count + 1'b1;
                     end else if (step_count == (NUMBER_OF_STEP - 1)) begin
-                        txdata               <= SKP_OS[step_count*DATA_WIDTH - 1 +: DATA_WIDTH];
+                        txdata               <= SKP_OS[step_count*DATA_WIDTH +: DATA_WIDTH];
                         txdatak              <= {DATA_BYTES{1'b1}};
                         sending_SKP          <= 1'b1;
                         if (SKP_count_inc)
@@ -147,7 +146,7 @@ module ccfpga_SKP_generator #(
     endgenerate
 
     assign SKP_count_inc   = s_count == COUNT_MIN;
-    assign SKP_send_enable = (number_of_queued_SKP != 4'b0) && (sending_data == 1'b0) && (sending_OS == 1'b0) && (sending_IDLE == 1'b0);
+    assign SKP_send_enable = (number_of_queued_SKP != 4'b0 || SKP_count_inc) && (sending_data == 1'b0) && (sending_OS == 1'b0) && (sending_IDLE == 1'b0);
     assign SKP_in_queue    = (number_of_queued_SKP != 4'b0);
 
 endmodule

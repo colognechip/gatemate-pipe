@@ -1,7 +1,7 @@
 # gatemate-pipe
 
 ## Description
-The **PHY Interface for the PCI Express Architecture (PIPE)** is part of the physical layer and serves as an interface between the Media Access Layer (MAC) and the Physical Coding Sublayer (PCS). The PIPE interface provides a clear separation between the soft-core RTL development and the FPGA-specific SerDes implementation. This abstraction reduces development effort and enhances portability, making it easier to migrate RTL designs across different FPGA vendors and platforms.
+The **PHY Interface for the PCI Express Architecture (PIPE)** is part of the physical layer and serves as an interface between the Media Access Control (MAC) Layer and the Physical Coding Sublayer (PCS). The PIPE interface provides a clear separation between the soft-core RTL development and the FPGA-specific SerDes implementation. This abstraction reduces development effort and enhances portability, making it easier to migrate RTL designs across different FPGA vendors and platforms.
 
 <img src="./images/PIPE_Position.png" width=300 height=330 />
 
