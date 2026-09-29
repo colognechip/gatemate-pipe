@@ -133,7 +133,7 @@ extern "C" void VUserMain0(int node)
     pcie->configurePcie(CONFIG_ENABLE_SKIPS, 20000);
     
     // Configure for a pipe
-    pcie->configurePcie(CONFIG_ENABLE_SCRAMBLING);
+    pcie->configurePcie(CONFIG_DISABLE_SCRAMBLING);
     pcie->configurePcie(CONFIG_DISABLE_8B10B);
 
     DebugVPrint("VUserMain: in node %d\n", node);

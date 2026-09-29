@@ -52,7 +52,7 @@ PCIE_MAP_C     = pcie_vhost_map.h
 PCIE_TOP       = test
 TOP_VC         = test_ica.vc
 HDRDIR         = ../../pcievhost/verilog/headers
-VLOGFLAGS      = $(USRSIMFLAGS) -DDISP_LINK_WIDE -I$(VPROC_TOP) -c $(TOP_VC) -Ptest.VCD_DUMP=1 -Ptest.DATA_BYTES=8
+VLOGFLAGS      = $(USRSIMFLAGS) -DDISP_LINK_WIDE -I$(VPROC_TOP) -c $(TOP_VC) -Ptest.VCD_DUMP=1 -Ptest.DATA_BYTES=8 -Ptest.DISABLE_SCRAMBLING=1
 VLOGDEBUGFLAGS = $(VLOGFLAGS) -Ptest.DEBUG_STOP=1
 
 #
@@ -147,7 +147,7 @@ $(VPROCLIB): $(VPROC_TOP)
 # Build the verilog
 #
 # Verilog source
-VLOG_SRC = $(shell find ../../src/mac_src/ -type f \( -iname \*.v -o -iname \*.sv \))
+VLOG_SRC = $(shell find ../../src/mac_src/ ../../src/dll_src/ -type f \( -iname \*.v -o -iname \*.sv \))
 
 verilog: $(PLI_SO) $(VLOGFILES) $(PCIE_MAP_V)
 	@iverilog -o $(SIMEXE) $(VLOGFLAGS) $(VLOG_SRC) -s test
