@@ -20,6 +20,7 @@ module ccfpga_rx_MAC #(
     input wire                 [4:0] fsm_state,
 
     input wire  [DATA_WIDTH - 1 : 0] rx_data,
+    input wire  [DATA_BYTES - 1 : 0] rx_data_k,
 
     input wire                       OS_reset_flag,
     input wire                       IDLE_reset_flag,
@@ -70,6 +71,7 @@ module ccfpga_rx_MAC #(
         .clk                ( clk          ),
         .reset              ( reset        ),
         .rx_data            ( rx_data      ),
+        .rx_data_k          ( rx_data_k    ),
         .COM_detected       ( COM_detected ),
         .data_OS            ( data_OS      ),
         .data_DLL           ( data_DLL     )

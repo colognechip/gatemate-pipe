@@ -272,6 +272,7 @@ module ccfpga_LTSSM_logic #(
       .fsm_state             ( s_fsm_state                 ),
 
       .rx_data               ( descrambled_data            ),
+      .rx_data_k             ( descrambled_data_k          ),
 
       .OS_reset_flag         ( s_rx_OS_rst                 ),
       .IDLE_reset_flag       ( s_rx_IDLE_rst               ),

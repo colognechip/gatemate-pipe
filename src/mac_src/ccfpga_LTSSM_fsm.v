@@ -289,6 +289,7 @@ module ccfpga_LTSSM_fsm #(
             s_clk_timeout_rst            = 1'b0; // Start counting 48ms
          end
          CONFIG_LINKWIDTH_START_LINKNUM : begin
+            s_send_OS_trigger            = 1'b1;
             s_link_detected_rst          = 1'b0;
             s_clk_timeout_rst            = 1'b0; // Start counting 24ms
          end
@@ -298,6 +299,7 @@ module ccfpga_LTSSM_fsm #(
             s_clk_timeout_rst            = 1'b0; // Start counting 24ms
          end
          CONFIG_LINKWIDTH_ACCEPT_LANENUM : begin
+            s_send_OS_trigger            = 1'b1;
             s_lane_detected_rst          = 1'b0;
             s_clk_timeout_rst            = 1'b0; // Start counting 2ms
          end

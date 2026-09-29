@@ -15,6 +15,7 @@ module ccfpga_data_assembly #(
     input wire                     clk,                         // Clock
     input wire                     reset,                       // Asynchronous reset
     input wire    [DATA_WIDTH-1:0] rx_data,                     // Received data bytes
+    input wire    [DATA_BYTES-1:0] rx_data_k,                   // Received K flags
     output reg                     COM_detected,                // COM detected flag
     output reg [PATTERN_WIDTH-1:0] data_OS,                     // Extracted Ordered Set data
     output reg    [DATA_WIDTH-1:0] data_DLL                     // Data forwarded to DLL
@@ -25,13 +26,16 @@ module ccfpga_data_assembly #(
     localparam SKP = 8'h1C;
 
     // Shift registers to store received data for Ordered Set assembly
-    reg [DATA_WIDTH - 1 : 0] rx_data_shift [NUMBER_OF_STEPS : 0];
+    reg [DATA_WIDTH - 1 : 0] rx_data_shift   [NUMBER_OF_STEPS : 0];
+    reg [DATA_BYTES - 1 : 0] rx_data_k_shift [NUMBER_OF_STEPS : 0];
     integer i;
 
     always @ (posedge clk) begin
-        rx_data_shift[0] <= rx_data;
+        rx_data_shift[0]   <= rx_data;
+        rx_data_k_shift[0] <= rx_data_k;
         for ( i = 1; i < NUMBER_OF_STEPS + 1; i = i + 1 ) begin
-            rx_data_shift[i] <= rx_data_shift[i - 1];
+            rx_data_shift[i]   <= rx_data_shift[i - 1];
+            rx_data_k_shift[i] <= rx_data_k_shift[i - 1];
         end
     end
 
@@ -46,9 +50,9 @@ module ccfpga_data_assembly #(
                     data_DLL        <= {DATA_WIDTH{1'b0}};
                     COM_detected    <= 1'b0;
                     data_OS         <= {PATTERN_WIDTH{1'b0}};
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM && rx_data_k_shift[NUMBER_OF_STEPS][0] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][1] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -56,9 +60,9 @@ module ccfpga_data_assembly #(
                         data_OS[63:0]      <= rx_data_shift[NUMBER_OF_STEPS];
                         data_OS[127:64]    <= rx_data_shift[NUMBER_OF_STEPS - 1];
                     end
-                end else if (rx_data_shift[NUMBER_OF_STEPS][15:8] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS][23:16] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == COM && rx_data_k_shift[NUMBER_OF_STEPS][1] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS][23:16] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][2] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -67,9 +71,9 @@ module ccfpga_data_assembly #(
                         data_OS[119:56]    <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
                         data_OS[127:120]   <= rx_data_shift[NUMBER_OF_STEPS - 2][7:0];
                     end
-                end else if (rx_data_shift[NUMBER_OF_STEPS][23:16] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS][31:24] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][23:16] == COM && rx_data_k_shift[NUMBER_OF_STEPS][2] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS][31:24] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][3] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -78,9 +82,9 @@ module ccfpga_data_assembly #(
                         data_OS[111:48]    <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
                         data_OS[127:112]   <= rx_data_shift[NUMBER_OF_STEPS - 2][15:0];
                     end
-                end else if (rx_data_shift[NUMBER_OF_STEPS][31:24] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS][39:32] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][31:24] == COM && rx_data_k_shift[NUMBER_OF_STEPS][3] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS][39:32] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][4] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -89,9 +93,9 @@ module ccfpga_data_assembly #(
                         data_OS[103:40]    <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
                         data_OS[127:104]   <= rx_data_shift[NUMBER_OF_STEPS - 2][23:0];
                     end
-                end else if (rx_data_shift[NUMBER_OF_STEPS][39:32] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS][47:40] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][39:32] == COM && rx_data_k_shift[NUMBER_OF_STEPS][4] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS][47:40] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][5] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -100,9 +104,9 @@ module ccfpga_data_assembly #(
                         data_OS[95:32]     <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
                         data_OS[127:96]    <= rx_data_shift[NUMBER_OF_STEPS - 2][31:0];
                     end
-                end else if (rx_data_shift[NUMBER_OF_STEPS][47:40] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS][55:48] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][47:40] == COM && rx_data_k_shift[NUMBER_OF_STEPS][5] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS][55:48] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][6] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -111,9 +115,9 @@ module ccfpga_data_assembly #(
                         data_OS[87:24]     <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
                         data_OS[127:88]    <= rx_data_shift[NUMBER_OF_STEPS - 2][39:0];
                     end
-                end else if (rx_data_shift[NUMBER_OF_STEPS][55:48] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS][63:56] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][55:48] == COM && rx_data_k_shift[NUMBER_OF_STEPS][6] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS][63:56] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][7] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -122,9 +126,9 @@ module ccfpga_data_assembly #(
                         data_OS[79:16]     <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
                         data_OS[127:80]    <= rx_data_shift[NUMBER_OF_STEPS - 2][47:0];
                     end
-                end else if (rx_data_shift[NUMBER_OF_STEPS][63:56] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS - 1][7:0] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][63:56] == COM && rx_data_k_shift[NUMBER_OF_STEPS][7] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS - 1][7:0] == SKP && rx_data_k_shift[NUMBER_OF_STEPS - 1][0] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -145,9 +149,9 @@ module ccfpga_data_assembly #(
                     data_DLL        <= {DATA_WIDTH{1'b0}};
                     COM_detected    <= 1'b0;
                     data_OS         <= {PATTERN_WIDTH{1'b0}};
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM && rx_data_k_shift[NUMBER_OF_STEPS][0] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][1] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -157,9 +161,9 @@ module ccfpga_data_assembly #(
                         data_OS[95:64]     <= rx_data_shift[NUMBER_OF_STEPS - 2];
                         data_OS[127:96]    <= rx_data_shift[NUMBER_OF_STEPS - 3];
                     end
-                end else if (rx_data_shift[NUMBER_OF_STEPS][15:8] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS][23:16] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == COM && rx_data_k_shift[NUMBER_OF_STEPS][1] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS][23:16] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][2] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -170,9 +174,9 @@ module ccfpga_data_assembly #(
                         data_OS[119:88]    <= rx_data_shift[NUMBER_OF_STEPS - 3][31:0];
                         data_OS[127:120]   <= rx_data_shift[NUMBER_OF_STEPS - 4][7:0];
                     end
-                end else if (rx_data_shift[NUMBER_OF_STEPS][23:16] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS][31:24] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][23:16] == COM && rx_data_k_shift[NUMBER_OF_STEPS][2] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS][31:24] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][3] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -183,9 +187,9 @@ module ccfpga_data_assembly #(
                         data_OS[111:80]    <= rx_data_shift[NUMBER_OF_STEPS - 3][31:0];
                         data_OS[127:112]   <= rx_data_shift[NUMBER_OF_STEPS - 4][15:0];
                     end
-                end else if (rx_data_shift[NUMBER_OF_STEPS][31:24] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS - 1][7:0] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][31:24] == COM && rx_data_k_shift[NUMBER_OF_STEPS][3] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS - 1][7:0] == SKP && rx_data_k_shift[NUMBER_OF_STEPS - 1][0] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -208,9 +212,9 @@ module ccfpga_data_assembly #(
                     data_DLL        <= {DATA_WIDTH{1'b0}};
                     COM_detected    <= 1'b0;
                     data_OS         <= {PATTERN_WIDTH{1'b0}};
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM && rx_data_k_shift[NUMBER_OF_STEPS][0] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][1] ) begin
                         COM_detected    <= 1'b0;
                         data_OS         <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -224,9 +228,9 @@ module ccfpga_data_assembly #(
                         data_OS[111:96]    <= rx_data_shift[NUMBER_OF_STEPS - 6];
                         data_OS[127:112]   <= rx_data_shift[NUMBER_OF_STEPS - 7];
                     end
-                end else if (rx_data_shift[NUMBER_OF_STEPS][15:8] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS-1][7:0] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == COM && rx_data_k_shift[NUMBER_OF_STEPS][1] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS-1][7:0] == SKP && rx_data_k_shift[NUMBER_OF_STEPS-1][0] ) begin
                         COM_detected       <= 1'b0;
                         data_OS            <= {PATTERN_WIDTH{1'b0}};
                     end else begin
@@ -253,9 +257,9 @@ module ccfpga_data_assembly #(
                     data_DLL        <= {DATA_WIDTH{1'b0}};
                     COM_detected    <= 1'b0;
                     data_OS         <= {PATTERN_WIDTH{1'b0}};
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    if ( rx_data_shift[NUMBER_OF_STEPS - 1][7:0] == SKP ) begin
+                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM && rx_data_k_shift[NUMBER_OF_STEPS][0] ) begin
+                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+                    if ( rx_data_shift[NUMBER_OF_STEPS - 1][7:0] == SKP && rx_data_k_shift[NUMBER_OF_STEPS - 1][0] ) begin
                         COM_detected    <= 1'b0;
                         data_OS         <= {PATTERN_WIDTH{1'b0}};
                     end else begin
