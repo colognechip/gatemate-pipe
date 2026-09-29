@@ -5,7 +5,7 @@
 // - Flag output is set when the target count value is reached and hold until reset
 //==================================================================================
 
-module ccfpga_clk_counter #(
+module dll_clk_counter #(
     parameter  BIT_WIDTH = 21        // Width of Count Register
    )
    (
