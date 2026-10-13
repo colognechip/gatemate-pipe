@@ -98,7 +98,7 @@ module tlp_rx_buffer #(
         for (i = 0; i < DATA_BYTES; i = i + 1) begin : crc_bytes
             lcrc_byte crc_b (
                 .data_in (data_TL_in[i*8 +: 8]),
-                .crc_en  (crc_en && (i < DATA_BYTES/2 || !tlp_half)),
+                .crc_en  (crc_en && (i < DATA_BYTES/2 || !tlp_half)), // other half word should not be used for CRC calculation
                 .crcIn   (lfsr_in [i*LFSR_WIDTH +: LFSR_WIDTH]),
                 .crcOut  (lfsr_out[i*LFSR_WIDTH +: LFSR_WIDTH])
             );
