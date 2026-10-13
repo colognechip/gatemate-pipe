@@ -43,251 +43,52 @@ module ccfpga_data_assembly #(
     // to the first or the fifth byte for 64 bit data width and always to the first byte for 32 bit or narrower.
     // However, this design can handle any COM position and is more robust to potential future changes in SerDes alignment.
 
+    localparam WIN_BYTES = (NUMBER_OF_STEPS + 1) * DATA_BYTES;
+
+    wire [WIN_BYTES*8-1:0] win; //  flatten out the received window
+    wire   [WIN_BYTES-1:0] win_k;
+
+    genvar w;
     generate
-        if ( DATA_WIDTH == 64 ) begin
-            always @ (posedge clk or posedge reset) begin
-                if ( reset ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    COM_detected    <= 1'b0;
-                    data_OS         <= {PATTERN_WIDTH{1'b0}};
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM && rx_data_k_shift[NUMBER_OF_STEPS][0] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][1] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[63:0]      <= rx_data_shift[NUMBER_OF_STEPS];
-                        data_OS[127:64]    <= rx_data_shift[NUMBER_OF_STEPS - 1];
-                    end
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == COM && rx_data_k_shift[NUMBER_OF_STEPS][1] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS][23:16] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][2] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[55:0]      <= rx_data_shift[NUMBER_OF_STEPS][63:8];
-                        data_OS[119:56]    <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
-                        data_OS[127:120]   <= rx_data_shift[NUMBER_OF_STEPS - 2][7:0];
-                    end
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][23:16] == COM && rx_data_k_shift[NUMBER_OF_STEPS][2] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS][31:24] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][3] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[47:0]      <= rx_data_shift[NUMBER_OF_STEPS][63:16];
-                        data_OS[111:48]    <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
-                        data_OS[127:112]   <= rx_data_shift[NUMBER_OF_STEPS - 2][15:0];
-                    end
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][31:24] == COM && rx_data_k_shift[NUMBER_OF_STEPS][3] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS][39:32] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][4] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[39:0]      <= rx_data_shift[NUMBER_OF_STEPS][63:24];
-                        data_OS[103:40]    <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
-                        data_OS[127:104]   <= rx_data_shift[NUMBER_OF_STEPS - 2][23:0];
-                    end
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][39:32] == COM && rx_data_k_shift[NUMBER_OF_STEPS][4] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS][47:40] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][5] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[31:0]      <= rx_data_shift[NUMBER_OF_STEPS][63:32];
-                        data_OS[95:32]     <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
-                        data_OS[127:96]    <= rx_data_shift[NUMBER_OF_STEPS - 2][31:0];
-                    end
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][47:40] == COM && rx_data_k_shift[NUMBER_OF_STEPS][5] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS][55:48] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][6] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[23:0]      <= rx_data_shift[NUMBER_OF_STEPS][63:40];
-                        data_OS[87:24]     <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
-                        data_OS[127:88]    <= rx_data_shift[NUMBER_OF_STEPS - 2][39:0];
-                    end
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][55:48] == COM && rx_data_k_shift[NUMBER_OF_STEPS][6] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS][63:56] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][7] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[15:0]      <= rx_data_shift[NUMBER_OF_STEPS][63:48];
-                        data_OS[79:16]     <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
-                        data_OS[127:80]    <= rx_data_shift[NUMBER_OF_STEPS - 2][47:0];
-                    end
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][63:56] == COM && rx_data_k_shift[NUMBER_OF_STEPS][7] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS - 1][7:0] == SKP && rx_data_k_shift[NUMBER_OF_STEPS - 1][0] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[7:0]       <= rx_data_shift[NUMBER_OF_STEPS][63:56];
-                        data_OS[71:8]      <= rx_data_shift[NUMBER_OF_STEPS - 1][63:0];
-                        data_OS[127:72]    <= rx_data_shift[NUMBER_OF_STEPS - 2][55:0];
-                    end
-                end else begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    COM_detected    <= 1'b0;
-                    data_OS         <= {PATTERN_WIDTH{1'b0}};
-                end
-            end
-        end else if ( DATA_WIDTH == 32 ) begin
-            always @ (posedge clk or posedge reset) begin
-                if ( reset ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    COM_detected    <= 1'b0;
-                    data_OS         <= {PATTERN_WIDTH{1'b0}};
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM && rx_data_k_shift[NUMBER_OF_STEPS][0] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][1] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[31:0]      <= rx_data_shift[NUMBER_OF_STEPS];
-                        data_OS[63:32]     <= rx_data_shift[NUMBER_OF_STEPS - 1];
-                        data_OS[95:64]     <= rx_data_shift[NUMBER_OF_STEPS - 2];
-                        data_OS[127:96]    <= rx_data_shift[NUMBER_OF_STEPS - 3];
-                    end
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == COM && rx_data_k_shift[NUMBER_OF_STEPS][1] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS][23:16] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][2] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[23:0]      <= rx_data_shift[NUMBER_OF_STEPS][31:8];
-                        data_OS[55:24]     <= rx_data_shift[NUMBER_OF_STEPS - 1][31:0];
-                        data_OS[87:56]     <= rx_data_shift[NUMBER_OF_STEPS - 2][31:0];
-                        data_OS[119:88]    <= rx_data_shift[NUMBER_OF_STEPS - 3][31:0];
-                        data_OS[127:120]   <= rx_data_shift[NUMBER_OF_STEPS - 4][7:0];
-                    end
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][23:16] == COM && rx_data_k_shift[NUMBER_OF_STEPS][2] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS][31:24] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][3] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[15:0]      <= rx_data_shift[NUMBER_OF_STEPS][31:16];
-                        data_OS[47:16]     <= rx_data_shift[NUMBER_OF_STEPS - 1][31:0];
-                        data_OS[79:48]     <= rx_data_shift[NUMBER_OF_STEPS - 2][31:0];
-                        data_OS[111:80]    <= rx_data_shift[NUMBER_OF_STEPS - 3][31:0];
-                        data_OS[127:112]   <= rx_data_shift[NUMBER_OF_STEPS - 4][15:0];
-                    end
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][31:24] == COM && rx_data_k_shift[NUMBER_OF_STEPS][3] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS - 1][7:0] == SKP && rx_data_k_shift[NUMBER_OF_STEPS - 1][0] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[7:0]       <= rx_data_shift[NUMBER_OF_STEPS][31:24];
-                        data_OS[39:8]      <= rx_data_shift[NUMBER_OF_STEPS - 1][31:0];
-                        data_OS[71:40]     <= rx_data_shift[NUMBER_OF_STEPS - 2][31:0];
-                        data_OS[103:72]    <= rx_data_shift[NUMBER_OF_STEPS - 3][31:0];
-                        data_OS[127:104]   <= rx_data_shift[NUMBER_OF_STEPS - 4][23:0];
-                    end
-                end else begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    COM_detected    <= 1'b0;
-                    data_OS         <= {PATTERN_WIDTH{1'b0}};
-                end
-            end
-        end else if ( DATA_WIDTH == 16 ) begin
-            always @ (posedge clk or posedge reset) begin
-                if ( reset ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    COM_detected    <= 1'b0;
-                    data_OS         <= {PATTERN_WIDTH{1'b0}};
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM && rx_data_k_shift[NUMBER_OF_STEPS][0] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == SKP && rx_data_k_shift[NUMBER_OF_STEPS][1] ) begin
-                        COM_detected    <= 1'b0;
-                        data_OS         <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[15:0]      <= rx_data_shift[NUMBER_OF_STEPS];
-                        data_OS[31:16]     <= rx_data_shift[NUMBER_OF_STEPS - 1];
-                        data_OS[47:32]     <= rx_data_shift[NUMBER_OF_STEPS - 2];
-                        data_OS[63:48]     <= rx_data_shift[NUMBER_OF_STEPS - 3];
-                        data_OS[79:64]     <= rx_data_shift[NUMBER_OF_STEPS - 4];
-                        data_OS[95:80]     <= rx_data_shift[NUMBER_OF_STEPS - 5];
-                        data_OS[111:96]    <= rx_data_shift[NUMBER_OF_STEPS - 6];
-                        data_OS[127:112]   <= rx_data_shift[NUMBER_OF_STEPS - 7];
-                    end
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][15:8] == COM && rx_data_k_shift[NUMBER_OF_STEPS][1] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS-1][7:0] == SKP && rx_data_k_shift[NUMBER_OF_STEPS-1][0] ) begin
-                        COM_detected       <= 1'b0;
-                        data_OS            <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[7:0]       <= rx_data_shift[NUMBER_OF_STEPS][15:8];
-                        data_OS[23:8]      <= rx_data_shift[NUMBER_OF_STEPS - 1][15:0];
-                        data_OS[39:24]     <= rx_data_shift[NUMBER_OF_STEPS - 2][15:0];
-                        data_OS[55:40]     <= rx_data_shift[NUMBER_OF_STEPS - 3][15:0];
-                        data_OS[71:56]     <= rx_data_shift[NUMBER_OF_STEPS - 4][15:0];
-                        data_OS[87:72]     <= rx_data_shift[NUMBER_OF_STEPS - 5][15:0];
-                        data_OS[103:88]    <= rx_data_shift[NUMBER_OF_STEPS - 6][15:0];
-                        data_OS[119:104]   <= rx_data_shift[NUMBER_OF_STEPS - 7][15:0];
-                        data_OS[127:120]   <= rx_data_shift[NUMBER_OF_STEPS - 8][7:0];
-                    end
-                end else begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    COM_detected    <= 1'b0;
-                    data_OS         <= {PATTERN_WIDTH{1'b0}};
-                end
-            end
-        end else begin // 8-Bit data width
-            always @ (posedge clk or posedge reset) begin
-                if ( reset ) begin
-                    data_DLL        <= {DATA_WIDTH{1'b0}};
-                    COM_detected    <= 1'b0;
-                    data_OS         <= {PATTERN_WIDTH{1'b0}};
-                end else if ( rx_data_shift[NUMBER_OF_STEPS][7:0] == COM && rx_data_k_shift[NUMBER_OF_STEPS][0] ) begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    if ( rx_data_shift[NUMBER_OF_STEPS - 1][7:0] == SKP && rx_data_k_shift[NUMBER_OF_STEPS - 1][0] ) begin
-                        COM_detected    <= 1'b0;
-                        data_OS         <= {PATTERN_WIDTH{1'b0}};
-                    end else begin
-                        COM_detected       <= 1'b1;
-                        data_OS[7:0]       <= rx_data_shift[NUMBER_OF_STEPS];
-                        data_OS[15:8]      <= rx_data_shift[NUMBER_OF_STEPS - 1];
-                        data_OS[23:16]     <= rx_data_shift[NUMBER_OF_STEPS - 2];
-                        data_OS[31:24]     <= rx_data_shift[NUMBER_OF_STEPS - 3];
-                        data_OS[39:32]     <= rx_data_shift[NUMBER_OF_STEPS - 4];
-                        data_OS[47:40]     <= rx_data_shift[NUMBER_OF_STEPS - 5];
-                        data_OS[55:48]     <= rx_data_shift[NUMBER_OF_STEPS - 6];
-                        data_OS[63:56]     <= rx_data_shift[NUMBER_OF_STEPS - 7];
-                        data_OS[71:64]     <= rx_data_shift[NUMBER_OF_STEPS - 8];
-                        data_OS[79:72]     <= rx_data_shift[NUMBER_OF_STEPS - 9];
-                        data_OS[87:80]     <= rx_data_shift[NUMBER_OF_STEPS - 10];
-                        data_OS[95:88]     <= rx_data_shift[NUMBER_OF_STEPS - 11];
-                        data_OS[103:96]    <= rx_data_shift[NUMBER_OF_STEPS - 12];
-                        data_OS[111:104]   <= rx_data_shift[NUMBER_OF_STEPS - 13];
-                        data_OS[119:112]   <= rx_data_shift[NUMBER_OF_STEPS - 14];
-                        data_OS[127:120]   <= rx_data_shift[NUMBER_OF_STEPS - 15];
-                    end
-                end else begin
-                    data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
-                    COM_detected    <= 1'b0;
-                    data_OS         <= {PATTERN_WIDTH{1'b0}};
-                end
-            end
+        for ( w = 0; w < NUMBER_OF_STEPS + 1; w = w + 1 ) begin : window
+            assign win  [w*DATA_WIDTH +: DATA_WIDTH] = rx_data_shift  [NUMBER_OF_STEPS - w];
+            assign win_k[w*DATA_BYTES +: DATA_BYTES] = rx_data_k_shift[NUMBER_OF_STEPS - w];
         end
     endgenerate
+
+    reg                     com_found;
+    reg                     skp_found;
+    reg [PATTERN_WIDTH-1:0] os_found;
+    integer p;
+
+    always @ (*) begin
+        com_found = 1'b0;
+        skp_found = 1'b0;
+        os_found  = {PATTERN_WIDTH{1'b0}};
+        for ( p = DATA_BYTES - 1; p >= 0; p = p - 1 ) begin
+            if ( win[8*p +: 8] == COM && win_k[p] ) begin
+                com_found = 1'b1;
+                skp_found = ( win[8*(p+1) +: 8] == SKP && win_k[p+1] );
+                os_found  = win[8*p +: PATTERN_WIDTH];
+            end
+        end
+    end
+
+    always @ (posedge clk or posedge reset) begin
+        if ( reset ) begin
+            data_DLL        <= {DATA_WIDTH{1'b0}};
+            COM_detected    <= 1'b0;
+            data_OS         <= {PATTERN_WIDTH{1'b0}};
+        end else begin
+            data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+            if ( com_found && !skp_found ) begin
+                COM_detected    <= 1'b1;
+                data_OS         <= os_found;
+            end else begin
+                COM_detected    <= 1'b0;
+                data_OS         <= {PATTERN_WIDTH{1'b0}};
+            end
+        end
+    end
 
 endmodule

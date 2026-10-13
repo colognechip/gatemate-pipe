@@ -41,7 +41,7 @@ module ccfpga_rx_MAC_data #(
             if (K_detected) begin
                 receiving_data <= 1'b1;
                 rx_data_DLL    <= rx_data;
-                rx_dataK_DLL  <= char_is_K;
+                rx_dataK_DLL  <= char_is_K | char_is_END;
             end else if (END_detected) begin
                 receiving_data <= 1'b0;
                 rx_data_DLL    <= rx_data;

@@ -41,6 +41,11 @@ module ccfpga_send_OS #(
 
    reg                               SKP_in_queue_reg; // Register to hold SKP_in_queue status for the duration of OS transmission, only updated when finishing sending an OS
    reg [$clog2(NUMBER_OF_STEPS) : 0] step;
+   reg       [PATTERN_WIDTH - 1 : 0] pattern_reg;
+   reg       [PATTERN_BYTES - 1 : 0] pattern_k_reg;
+
+   wire      [PATTERN_WIDTH - 1 : 0] cur_pattern   = (step == 0) ? pattern   : pattern_reg;
+   wire      [PATTERN_BYTES - 1 : 0] cur_pattern_k = (step == 0) ? pattern_k : pattern_k_reg;
 
    always @ (posedge clk or posedge reset) begin
       if ( reset ) begin
@@ -50,17 +55,23 @@ module ccfpga_send_OS #(
          step    <= 0;
          sending_OS <= 1'b0;
          SKP_in_queue_reg <= 1'b0;
-      end else if (send_OS_trigger == 1'b1 && SKP_in_queue_reg == 1'b0) begin
+         pattern_reg <= {PATTERN_WIDTH{1'b0}};
+         pattern_k_reg <= {PATTERN_BYTES{1'b0}};
+      end else if ((send_OS_trigger == 1'b1 && SKP_in_queue_reg == 1'b0) || step != 0) begin
+         if (step == 0) begin
+            pattern_reg   <= pattern;
+            pattern_k_reg <= pattern_k;
+         end
          if ( step != NUMBER_OF_STEPS ) begin
-            txdata  <= pattern[DATA_WIDTH * step +: DATA_WIDTH];
-            txdatak <= pattern_k[DATA_BYTES * step +: DATA_BYTES];
+            txdata  <= cur_pattern[DATA_WIDTH * step +: DATA_WIDTH];
+            txdatak <= cur_pattern_k[DATA_BYTES * step +: DATA_BYTES];
             OS_sent <= 1'b0;
             sending_OS <= 1'b1;
             step    <= step + 1;
             SKP_in_queue_reg <= SKP_in_queue_reg;
          end else if ( step == NUMBER_OF_STEPS ) begin
-            txdata  <= pattern[DATA_WIDTH * step +: DATA_WIDTH];
-            txdatak <= pattern_k[DATA_BYTES * step +: DATA_BYTES];
+            txdata  <= cur_pattern[DATA_WIDTH * step +: DATA_WIDTH];
+            txdatak <= cur_pattern_k[DATA_BYTES * step +: DATA_BYTES];
             OS_sent <= 1'b1;
             sending_OS <= 1'b1;
             step    <= 0;

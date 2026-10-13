@@ -33,7 +33,8 @@ module ccfpga_LTSSM_logic #(
    output wire  [DATA_WIDTH-1:0] o_RxData,       // Rx Data
    output wire  [DATA_BYTES-1:0] o_RxDataK,      // Rx K Data
 
-   output wire                   o_LinkUp        // Link is on
+   output wire                   o_LinkUp,       // Link is on
+   output wire             [4:0] o_LTSSM_State   // LTSSM state (debug)
    );
 //-------------------------------------------------------------------------------------------------------------------------------
 // Parameters
@@ -127,9 +128,15 @@ module ccfpga_LTSSM_logic #(
                         s_fsm_state == 5'b00001 ? 2'b10 :
                         s_fsm_state == 5'b11010 ? 2'b10 :
                         s_fsm_state == 5'b11011 ? 2'b10 : 2'b00; // Power Down signal to SerDes
+   assign o_LTSSM_State = s_fsm_state;
    assign o_LinkUp = s_fsm_state == 5'b01010 ? 1'b1 :
-                     s_fsm_state == 5'b01001 ? 1'b1 :
-                     s_fsm_state == 5'b10110 ? 1'b1 : 1'b0;       // Link Up enabled in L0 or CONFIG_IDLE (incl. PRE_L0 pass-through)
+                     s_fsm_state == 5'b10110 ? 1'b1 :
+                     s_fsm_state == 5'b01011 ? 1'b1 :
+                     s_fsm_state == 5'b10100 ? 1'b1 :
+                     s_fsm_state == 5'b10101 ? 1'b1 :
+                     s_fsm_state == 5'b10111 ? 1'b1 :
+                     s_fsm_state == 5'b11000 ? 1'b1 :
+                     s_fsm_state == 5'b11001 ? 1'b1 : 1'b0;       // Link Up in L0 (incl. PRE_L0) and Recovery (incl. PRE_RECOVERY_*)
    assign s_rx_flag = ((s_rx_flag_OS && !idle_state) || (s_rx_flag_IDLE && idle_state));       // Rx flag
    assign s_tx_flag = (s_tx_flag_OS && !idle_state) || (s_tx_flag_IDLE && idle_state);         // Tx flag
    // Rx reset when:
