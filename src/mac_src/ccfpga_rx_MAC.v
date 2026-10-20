@@ -61,6 +61,7 @@ module ccfpga_rx_MAC #(
     wire                     COM_detected;
     wire [PATTERN_WIDTH-1:0] data_OS;
     wire    [DATA_WIDTH-1:0] data_DLL;
+    wire    [DATA_BYTES-1:0] data_DLL_k;
 
 //--------------------------------------------------------------------------------
     ccfpga_data_assembly #(
@@ -74,7 +75,8 @@ module ccfpga_rx_MAC #(
         .rx_data_k          ( rx_data_k    ),
         .COM_detected       ( COM_detected ),
         .data_OS            ( data_OS      ),
-        .data_DLL           ( data_DLL     )
+        .data_DLL           ( data_DLL     ),
+        .data_DLL_k         ( data_DLL_k   )
     );
 //--------------------------------------------------------------------------------
 // Instantiation of Rx MAC Ordered Set processing module
@@ -141,6 +143,7 @@ module ccfpga_rx_MAC #(
         .clk            ( clk           ),
         .L0_enabled     ( L0_enabled    ),
         .rx_data        ( data_DLL      ),
+        .rx_data_k      ( data_DLL_k    ),
 
         .rx_data_DLL    ( rx_data_DLL   ),
         .rx_dataK_DLL   ( rx_dataK_DLL  )

@@ -11,76 +11,50 @@ module ccfpga_send_data #(
    input wire reset,
    input wire L0_enabled,
    input wire [DATA_WIDTH - 1 : 0] txdata_DLL,
+   input wire [DATA_BYTES - 1 : 0] txdatak_DLL,
 
    output reg [DATA_WIDTH - 1 : 0] txdata,
    output reg [DATA_BYTES - 1 : 0] txdatak,
    output reg sending_data
    );
 
-   localparam COM  = 8'hBC; // K28.5
    localparam STP  = 8'hFB; // K27.7
    localparam SDP  = 8'h5C; // K28.2
    localparam _END = 8'hFD; // K29.7
    localparam EDB  = 8'hFE; // K30.7
-   localparam PAD  = 8'hF7; // K23.7
 
-   wire                      K_detected;
-   wire [DATA_BYTES - 1 : 0] char_is_K;
-   wire                      END_detected;
-   wire [DATA_BYTES - 1 : 0] char_is_END;
-   wire [DATA_BYTES - 1 : 0] txdatak_reg;
+   reg     in_packet;
+   reg     in_packet_next;
+   integer i;
 
-   reg                       send_data_trigger;
-
-   always @ (posedge clk or posedge reset) begin
-      if (reset) begin
-         txdata  <= { DATA_WIDTH{1'b0} };
-         txdatak <= { DATA_BYTES{1'b0} };
-         send_data_trigger <= 1'b0;
-         sending_data <= 1'b0;
-      end else if (L0_enabled == 1'b1) begin // Transmit data only when in state L0
-         if (K_detected) begin
-            // STP or SDP detected, sending flag is set to 1
-            txdata  <= txdata_DLL;
-            txdatak <= txdatak_reg;
-            send_data_trigger <= 1'b1;
-            sending_data <= 1'b1;
-         end else if (END_detected) begin
-            // END detected, send last data, sending flag is reset to 0
-            txdata  <= txdata_DLL;
-            txdatak <= txdatak_reg;
-            send_data_trigger <= 1'b0;
-            sending_data <= 1'b1;
-         end else if (send_data_trigger == 1'b1) begin
-            // Continue sending data when sending flag is 1
-            txdata  <= txdata_DLL;
-            txdatak <= txdatak_reg;
-            send_data_trigger <= 1'b1;
-            sending_data <= 1'b1;
-         end else begin
-            txdata  <= { DATA_WIDTH{1'b0} };
-            txdatak <= { DATA_BYTES{1'b0} };
-            send_data_trigger <= 1'b0;
-            sending_data <= 1'b0;
+   always @ (*) begin
+      in_packet_next = in_packet;
+      for (i = 0; i < DATA_BYTES; i = i + 1) begin
+         if (txdatak_DLL[i]) begin
+            if (txdata_DLL[8*i +: 8] == STP || txdata_DLL[8*i +: 8] == SDP)
+               in_packet_next = 1'b1;
+            else if (txdata_DLL[8*i +: 8] == _END || txdata_DLL[8*i +: 8] == EDB)
+               in_packet_next = 1'b0;
          end
-      end else begin
-         txdata  <= { DATA_WIDTH{1'b0} };
-         txdatak <= { DATA_BYTES{1'b0} };
-         send_data_trigger <= 1'b0;
-         sending_data <= 1'b0;
       end
    end
 
-   // Detect special characters (STP, SDP or END) in all symbol positions
-   generate
-      genvar i;
-      for (i = 0; i < DATA_BYTES; i = i + 1) begin : k_detect
-         assign char_is_K[i]   = (txdata_DLL[8*i +: 8] == STP) || (txdata_DLL[8*i +: 8] == SDP);
-         assign char_is_END[i] = (txdata_DLL[8*i +: 8] == _END);
-         assign txdatak_reg[i] = char_is_K[i] || char_is_END[i];
+   always @ (posedge clk or posedge reset) begin
+      if (reset) begin
+         txdata       <= { DATA_WIDTH{1'b0} };
+         txdatak      <= { DATA_BYTES{1'b0} };
+         in_packet    <= 1'b0;
+         sending_data <= 1'b0;
+      end else if (L0_enabled && (in_packet || |txdatak_DLL)) begin
+         txdata       <= txdata_DLL;
+         txdatak      <= txdatak_DLL;
+         in_packet    <= in_packet_next;
+         sending_data <= 1'b1;
+      end else begin
+         txdata       <= { DATA_WIDTH{1'b0} };
+         txdatak      <= { DATA_BYTES{1'b0} };
+         in_packet    <= 1'b0;
+         sending_data <= 1'b0;
       end
-   endgenerate
-
-   assign K_detected   = |char_is_K;
-   assign END_detected = |char_is_END;
+   end
 endmodule

@@ -13,6 +13,7 @@ module ccfpga_rx_MAC_data #(
     input wire                       clk,                                 // Clock
     input wire                       L0_enabled,                          // L0 state enable signal
     input wire  [DATA_WIDTH - 1 : 0] rx_data,                             // Rx Data
+    input wire  [DATA_BYTES - 1 : 0] rx_data_k,                           // Rx Data control flags
 
     output reg  [DATA_WIDTH - 1 : 0] rx_data_DLL,                         // Data forwarded to DLL
     output reg  [DATA_BYTES - 1 : 0] rx_dataK_DLL                         // K-character indicators for DLL
@@ -62,8 +63,8 @@ module ccfpga_rx_MAC_data #(
     generate
         genvar j;
         for (j = 0; j < DATA_BYTES; j = j + 1) begin : k_detect
-            assign char_is_K[j]   = (rx_data[8*j +: 8] == STP) || (rx_data[8*j +: 8] == SDP);
-            assign char_is_END[j] = (rx_data[8*j +: 8] == _END);
+            assign char_is_K[j]   = rx_data_k[j] && ((rx_data[8*j +: 8] == STP) || (rx_data[8*j +: 8] == SDP));
+            assign char_is_END[j] = rx_data_k[j] && (rx_data[8*j +: 8] == _END);
         end
     endgenerate
 

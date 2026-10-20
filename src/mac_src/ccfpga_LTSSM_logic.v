@@ -322,6 +322,7 @@ module ccfpga_LTSSM_logic #(
       .reset                        ( reset                        ),
 
       .tx_data                      ( i_TxData                     ),
+      .tx_data_k                    ( i_TxDataK                    ),
 
       .s_tx_OS_flag_rst             ( s_tx_OS_flag_rst             ),
       .s_tx_IDLE_flag_rst           ( s_tx_IDLE_flag_rst           ),

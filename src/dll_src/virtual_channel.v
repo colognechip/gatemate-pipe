@@ -18,7 +18,7 @@ module virtual_channel #
     input  wire                         tx_dllp_valid,
     // Received data from Physical Layer
     input  wire        [DATA_WIDTH-1:0] rx_data,
-    //input  wire        [DATA_BYTES-1:0] rx_data_k,
+    input  wire        [DATA_BYTES-1:0] rx_data_k,
     // TLP data from Transaction Layer
     input  wire        [DATA_WIDTH-1:0] tx_tlp_data,
     //input  wire        [DATA_BYTES-1:0] tx_data_TL_k,
@@ -127,6 +127,7 @@ module virtual_channel #
         .clk(clk),
         .reset(reset),
         .rx_data(rx_data),
+        .rx_data_k(rx_data_k),
         .END_lost(END_lost), // tlp_rx_buffer for one TLP is full but no END is detected
 
         .SDP_detected(SDP_detected),

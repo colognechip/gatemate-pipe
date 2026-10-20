@@ -6,6 +6,7 @@ module packet_handler #(
     input wire                     clk,                         // Clock
     input wire                     reset,                       // Asynchronous reset
     input wire    [DATA_WIDTH-1:0] rx_data,                     // Received data bytes
+    input wire    [DATA_BYTES-1:0] rx_data_k,                   // Received data control flags
     input wire                     END_lost,                    // Receive buffer is full but no END is detected
 
     output reg                     SDP_detected,                // SDP detected flag
@@ -46,12 +47,25 @@ module packet_handler #(
         end
     end
 
+    reg [DATA_BYTES - 1 : 0] rx_data_k_shift [WIN_WORDS - 1 : 0];
+    always @ (posedge clk) begin
+        rx_data_k_shift[0] <= rx_data_k;
+        for ( i = 1; i < WIN_WORDS; i = i + 1 ) begin
+            rx_data_k_shift[i] <= rx_data_k_shift[i - 1];
+        end
+    end
+
     wire [WIN_BYTES*8-1:0] win; // flatten out the received window
+    wire   [WIN_BYTES-1:0] win_k; // flatten out the received window control flags
 
     genvar w;
     generate
         for ( w = 0; w < WIN_WORDS; w = w + 1 ) begin : window
             assign win[w*DATA_WIDTH +: DATA_WIDTH] = rx_data_shift[WIN_WORDS - 1 - w];
+        end
+
+        for ( w = 0; w < WIN_WORDS; w = w + 1 ) begin : window_k
+            assign win_k[w*DATA_BYTES +: DATA_BYTES] = rx_data_k_shift[WIN_WORDS - 1 - w];
         end
     endgenerate
 
@@ -71,7 +85,7 @@ module packet_handler #(
         start_is_stp = 1'b0;
         start_pos    = {POS_WIDTH{1'b0}};
         for ( p = DATA_BYTES - 1; p >= 0; p = p - 1 ) begin
-            if ( p >= ptr && (win[8*p +: 8] == SDP || win[8*p +: 8] == STP) ) begin // Seach for the lowest SDP/STP at or after ptr in the oldest word
+            if ( p >= ptr && ((win[8*p +: 8] == SDP && win_k[p +: 1] == 1'b1) || (win[8*p +: 8] == STP && win_k[p +: 1] == 1'b1) ) ) begin // Seach for the lowest SDP/STP at or after ptr in the oldest word
                 start_found  = 1'b1;
                 start_is_stp = (win[8*p +: 8] == STP);
                 start_pos    = p;
@@ -79,8 +93,10 @@ module packet_handler #(
         end
     end
 
-    wire [7:0] end_full = win[8*(q + DATA_BYTES + 4) +: 8]; // if the last word is full, END should be here
-    wire [7:0] end_half = HALF_WORDS ? win[8*(q + 8) +: 8] : 8'h00; // if the last word is half, END should be here
+    wire [7:0] end_full   = win[8*(q + DATA_BYTES + 4) +: 8]; // if the last word is full, END should be here
+    wire       end_full_k = win_k[q + DATA_BYTES + 4]; // if the last word is full, END should be here
+    wire [7:0] end_half   = HALF_WORDS ? win[8*(q + 8) +: 8] : 8'h00; // if the last word is half, END should be here
+    wire       end_half_k = HALF_WORDS ? win_k[q + 8] : 1'b0;
 
     wire [31:0] lcrc_full = {win[8*(q + DATA_BYTES) +: 8], win[8*(q + DATA_BYTES + 1) +: 8],
                              win[8*(q + DATA_BYTES + 2) +: 8], win[8*(q + DATA_BYTES + 3) +: 8]}; // if the last word is full, LCRC should be here
@@ -114,7 +130,7 @@ module packet_handler #(
 
             if ( in_tlp ) begin
                 word_cnt <= word_cnt + 1'b1;
-                if ( HALF_WORDS && end_half == _END ) begin // Half word TLP
+                if ( HALF_WORDS && end_half == _END && end_half_k ) begin // Half word TLP
                     END_detected <= 1'b1;
                     data_TL      <= {{(DATA_WIDTH/2){1'b0}}, win[8*q +: DATA_WIDTH/2]};
                     tlp_valid    <= 1'b1;
@@ -122,7 +138,7 @@ module packet_handler #(
                     lcrc         <= lcrc_half;
                     in_tlp       <= 1'b0;
                     ptr          <= q + 9 - DATA_BYTES; // = 4 byte LCRC + 1 byte END + 4 bytes of the last half word - DATA_BYTES
-                end else if ( end_full == _END ) begin // Full word TLP
+                end else if ( end_full == _END && end_full_k ) begin // Full word TLP
                     END_detected <= 1'b1;
                     data_TL      <= win[8*q +: DATA_WIDTH];
                     tlp_valid    <= 1'b1;

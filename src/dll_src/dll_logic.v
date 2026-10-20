@@ -12,7 +12,7 @@ module dll_logic #
     input  wire                         phy_linkup, // Link up flag from Physical layer
 
     input  wire        [DATA_WIDTH-1:0] phy_rx_data, // Received data extracted in physical layer
-    //input  wire        [DATA_BYTES-1:0] phy_rx_data_k, // Received data control flags
+    input  wire        [DATA_BYTES-1:0] phy_rx_data_k, // Received data control flags
 
     input  wire        [DATA_WIDTH-1:0] tl_tx_data, // Transmitted packet from TL
     //input  wire        [DATA_BYTES-1:0] tl_tx_data_k, // Transmitted packet from TL
@@ -67,7 +67,7 @@ module dll_logic #
                 .tx_dllp_valid(tl_tx_dllp_valid),
 
                 .rx_data(phy_rx_data),
-                //.rx_data_k(phy_rx_data_k),
+                .rx_data_k(phy_rx_data_k),
 
                 .tx_tlp_data(tl_tx_data),
                 //.tx_data_TL_k(tl_tx_data_k),

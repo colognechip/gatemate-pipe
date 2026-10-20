@@ -18,7 +18,8 @@ module ccfpga_data_assembly #(
     input wire    [DATA_BYTES-1:0] rx_data_k,                   // Received K flags
     output reg                     COM_detected,                // COM detected flag
     output reg [PATTERN_WIDTH-1:0] data_OS,                     // Extracted Ordered Set data
-    output reg    [DATA_WIDTH-1:0] data_DLL                     // Data forwarded to DLL
+    output reg    [DATA_WIDTH-1:0] data_DLL,                    // Data forwarded to DLL
+    output reg    [DATA_BYTES-1:0] data_DLL_k                   // Control flags of the data forwarded to DLL
 );
 
     // K characters
@@ -77,10 +78,12 @@ module ccfpga_data_assembly #(
     always @ (posedge clk or posedge reset) begin
         if ( reset ) begin
             data_DLL        <= {DATA_WIDTH{1'b0}};
+            data_DLL_k      <= {DATA_BYTES{1'b0}};
             COM_detected    <= 1'b0;
             data_OS         <= {PATTERN_WIDTH{1'b0}};
         end else begin
             data_DLL        <= rx_data_shift[NUMBER_OF_STEPS];
+            data_DLL_k      <= rx_data_k_shift[NUMBER_OF_STEPS];
             if ( com_found && !skp_found ) begin
                 COM_detected    <= 1'b1;
                 data_OS         <= os_found;

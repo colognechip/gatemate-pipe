@@ -13,6 +13,7 @@ module ccfpga_tx_MAC #(
    input wire                  reset,                        // Asynchronous reset
 
    input wire [DATA_WIDTH-1:0] tx_data,                      // Data from DLL
+   input wire [DATA_BYTES-1:0] tx_data_k,                    // Data K from DLL
 
    input wire                  s_tx_OS_flag_rst,             // Transmitter OS flag Reset
    input wire                  s_tx_IDLE_flag_rst,           // Transmitter IDLE flag Reset
@@ -124,6 +125,7 @@ module ccfpga_tx_MAC #(
    .reset           ( reset        ),
    .L0_enabled      ( L0_enabled   ),
    .txdata_DLL      ( tx_data      ),
+   .txdatak_DLL     ( tx_data_k    ),
 
    .txdata          ( txdata_DLL   ),
    .txdatak         ( txdatak_DLL  ),
