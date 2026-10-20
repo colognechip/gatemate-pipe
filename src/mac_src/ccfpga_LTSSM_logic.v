@@ -174,7 +174,7 @@ module ccfpga_LTSSM_logic #(
                            s_fsm_state == 5'b00100 ? 1'b1 :
                            s_fsm_state == 5'b00101 ? 1'b1 :
                            s_fsm_state == 5'b00110 ? 1'b1 :
-                           s_fsm_state == 5'b00111 ? 1'b1 :
+                           s_fsm_state == 5'b00111 ? 1'b0 :
                            s_fsm_state == 5'b01000 ? 1'b0 :
                            s_fsm_state == 5'b01001 ? 1'b0 :
                            s_fsm_state == 5'b10010 ? 1'b1 :
@@ -189,7 +189,7 @@ module ccfpga_LTSSM_logic #(
                            s_fsm_state == 5'b00100 ? 1'b0 :
                            s_fsm_state == 5'b00101 ? 1'b0 :
                            s_fsm_state == 5'b00110 ? 1'b0 :
-                           s_fsm_state == 5'b00111 ? 1'b0 :
+                           s_fsm_state == 5'b00111 ? 1'b1 :
                            s_fsm_state == 5'b01000 ? 1'b1 :
                            s_fsm_state == 5'b01001 ? 1'b0 :
                            s_fsm_state == 5'b10010 ? 1'b0 :
