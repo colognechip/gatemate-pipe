@@ -4,6 +4,7 @@
 
 module ccfpga_scrambler_byte(
     input wire  [7:0] data_in,
+    input wire        data_in_k,
     input wire        scrambler_en,
     input wire [15:0] lfsr_in,
     output reg [15:0] lfsr_out,
@@ -16,9 +17,9 @@ module ccfpga_scrambler_byte(
     localparam SKP = 8'h1C;
 
     always @(*) begin
-        if (data_in == COM) begin // Initialize LFSR on COM
+        if (data_in == COM && data_in_k) begin // Initialize LFSR on COM
             lfsr_out = 16'hFFFF;
-        end else if (data_in == SKP || !scrambler_en) begin // no advancement of LFSR for SKP
+        end else if ((data_in == SKP && data_in_k) || !scrambler_en) begin // no advancement of LFSR for SKP
             lfsr_out = lfsr_in;
         end else begin // Advance LFSR otherwise
             lfsr_out[0] = lfsr_in[8];

@@ -58,6 +58,7 @@ module ccfpga_scrambler #(
         for (i = 0; i < DATA_BYTES; i = i + 1) begin : scrambler
             ccfpga_scrambler_byte scrambler_byte_inst (
                 .data_in               (data_in[i*8 +: 8]),
+                .data_in_k             (data_in_k[i]),
                 .scrambler_en          (scrambler_en),
                 .lfsr_in               (lfsr_vector[i*LFSR_WIDTH +: LFSR_WIDTH]),
                 .lfsr_out              (lfsr_out[i*LFSR_WIDTH +: LFSR_WIDTH]),
