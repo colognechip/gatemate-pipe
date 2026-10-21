@@ -4,6 +4,12 @@ module dll_logic #
     parameter DATA_WIDTH = DATA_BYTES * 8,
     parameter NUMBER_OF_VIRTUAL_CHANNELS = 1,
     parameter PATTERN_WIDTH = 64,
+    parameter INIT_PH       = 8'd32,
+    parameter INIT_PD       = 12'd1008,
+    parameter INIT_NPH      = 8'd32,
+    parameter INIT_NPD      = 12'd1,
+    parameter INIT_CPLH     = 8'd0,
+    parameter INIT_CPLD     = 12'd0,
     parameter RETRY_ADDR_WIDTH = 9
 )
 (
@@ -53,6 +59,12 @@ module dll_logic #
             virtual_channel #(
                 .DATA_BYTES(DATA_BYTES),
                 .PATTERN_WIDTH(PATTERN_WIDTH),
+                .INIT_PH(INIT_PH),
+                .INIT_PD(INIT_PD),
+                .INIT_NPH(INIT_NPH),
+                .INIT_NPD(INIT_NPD),
+                .INIT_CPLH(INIT_CPLH),
+                .INIT_CPLD(INIT_CPLD),
                 .RETRY_ADDR_WIDTH(RETRY_ADDR_WIDTH)
             ) vc_inst (
                 .clk(phy_clk),
