@@ -34,6 +34,7 @@ module virtual_channel_tx #
     input  wire                         tlp_valid,
     input  wire                         tlp_first,
     input  wire                         tlp_last,
+    input  wire                         tlp_last_half, // only for DATA_BYTES=8
     input  wire        [DATA_WIDTH-1:0] tlp_data,
 
     input  wire                         release_flag,
@@ -303,6 +304,7 @@ module virtual_channel_tx #
         .tlp_valid(tlp_valid),
         .tlp_first(tlp_first),
         .tlp_last(tlp_last),
+        .tlp_last_half(tlp_last_half),
         .tlp_in_data(tlp_data),
 
         .current_seq_num(current_seq_num),

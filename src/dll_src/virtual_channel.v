@@ -31,6 +31,7 @@ module virtual_channel #
     input  wire                         tx_tlp_valid,
     input  wire                         tx_tlp_first,
     input  wire                         tx_tlp_last,
+    input  wire                         tx_tlp_last_half, // only for DATA_BYTES=8
     output reg                          tx_tlp_ready, // Ready if retry buffer is empty
     // Transmitted data to Physical Layer
     output reg         [DATA_WIDTH-1:0] tx_data,
@@ -398,6 +399,7 @@ module virtual_channel #
         .tlp_valid(tx_tlp_valid),
         .tlp_first(tx_tlp_first),
         .tlp_last(tx_tlp_last),
+        .tlp_last_half(tx_tlp_last_half),
         .tlp_data(tx_tlp_data),
 
         .release_flag(tlp_released_flag),

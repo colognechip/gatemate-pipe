@@ -25,6 +25,7 @@ module dll_logic #
     input  wire                         tl_tx_tlp_valid, // TLP TX valid flag
     input  wire                         tl_tx_tlp_first, // TLP TX first batch flag
     input  wire                         tl_tx_tlp_last, // TLP TX last batch flag
+    input  wire                         tl_tx_tlp_last_half, // TLP TX last batch is half batch (4 bytes) (only for DATA_BYTES=8)
     output wire                         tl_tx_tlp_ready, // Retry buffer is empty/full
 
     input  wire                   [7:0] tl_tx_hdr_credit, // Transmitted DLLP header credit
@@ -86,6 +87,7 @@ module dll_logic #
                 .tx_tlp_valid(tl_tx_tlp_valid),
                 .tx_tlp_first(tl_tx_tlp_first),
                 .tx_tlp_last(tl_tx_tlp_last),
+                .tx_tlp_last_half(tl_tx_tlp_last_half),
                 .tx_tlp_ready(tl_tx_tlp_ready),
 
                 .tx_data(phy_tx_data),

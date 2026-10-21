@@ -11,6 +11,7 @@ module retry_buffer #(
     input  wire                   tlp_valid,
     input  wire                   tlp_first,
     input  wire                   tlp_last,
+    input  wire                   tlp_last_half, // only for DATA_BYTES=8
     input  wire  [DATA_WIDTH-1:0] tlp_in_data,
 
     input  wire            [11:0] current_seq_num, // Sequence number of the TLP being sent
@@ -41,6 +42,9 @@ module retry_buffer #(
 
     reg [2:0] state;
 
+    wire last_half = (DATA_BYTES == 8) && tlp_last && tlp_last_half;
+    reg  last_half_reg;
+
     localparam [2:0]    IDLE        = 3'b000,
                         STORE_TLP   = 3'b001,
                         STORE_CRC   = 3'b010, // not used
@@ -57,7 +61,8 @@ module retry_buffer #(
 
     assign tlp_out_data_k = (state == WRITE_START)
                             ? {{(DATA_BYTES-1){1'b0}}, 1'b1} : (state == SEND_TLP && read_cnt == word_cnt - 1)
-                            ? {1'b1, {(DATA_BYTES-1){1'b0}}} : {DATA_BYTES{1'b0}};
+                            ? (last_half_reg ? {{(DATA_BYTES/2){1'b0}}, 1'b1, {(DATA_BYTES/2-1){1'b0}}} : {1'b1, {(DATA_BYTES-1){1'b0}}})
+                            : {DATA_BYTES{1'b0}};
 
     // CRC also takes sequence number into account
     // Feed sequence number first
@@ -95,7 +100,7 @@ module retry_buffer #(
         for (i = 0; i < DATA_BYTES; i = i + 1) begin : crc_bytes
             lcrc_byte crc_b (
                 .data_in (tlp_in_data[i*8 +: 8]),
-                .crc_en  (crc_en),
+                .crc_en  (crc_en && (i < DATA_BYTES/2 || !last_half)),
                 .crcIn   (lfsr_in [i*LFSR_WIDTH +: LFSR_WIDTH]),
                 .crcOut  (lfsr_out[i*LFSR_WIDTH +: LFSR_WIDTH])
             );
@@ -139,10 +144,18 @@ module retry_buffer #(
                         retry_buffer[1][63:56]       <= _END;
                     end
                 end else if ((state == STORE_TLP && tlp_last) && tlp_valid) begin
-                    retry_buffer[write_ptr-1][63:24] <= tlp_in_data[39:0];
-                    retry_buffer[write_ptr][23:0]    <= tlp_in_data[63:40];
-                    retry_buffer[write_ptr][55:24]   <= {crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16], crc_computed_next[31:24]};
-                    retry_buffer[write_ptr][63:56]   <= _END;
+                    if (last_half) begin
+                        retry_buffer[write_ptr-1][55:24] <= tlp_in_data[31:0];
+                        retry_buffer[write_ptr-1][63:56] <= crc_computed_next[31:24];
+                        retry_buffer[write_ptr][23:0]    <= {crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16]};
+                        retry_buffer[write_ptr][31:24]   <= _END;
+                        retry_buffer[write_ptr][63:32]   <= 32'b0; // clear the rest of the word
+                    end else begin
+                        retry_buffer[write_ptr-1][63:24] <= tlp_in_data[39:0];
+                        retry_buffer[write_ptr][23:0]    <= tlp_in_data[63:40];
+                        retry_buffer[write_ptr][55:24]   <= {crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16], crc_computed_next[31:24]};
+                        retry_buffer[write_ptr][63:56]   <= _END;
+                    end
                 end else if (state == STORE_TLP && tlp_valid) begin
                     retry_buffer[write_ptr-1][63:24] <= tlp_in_data[39:0];
                     retry_buffer[write_ptr][23:0]    <= tlp_in_data[63:40];
@@ -181,6 +194,7 @@ module retry_buffer #(
             tlp_scheduled <= 1'b0;
             lcrc_reg      <= {LFSR_WIDTH{1'b0}};
             crc_state     <= {LFSR_WIDTH{1'b1}};
+            last_half_reg <= 1'b0;
         end else begin
             case (state)
 
@@ -188,6 +202,7 @@ module retry_buffer #(
                     if (tlp_valid && tlp_first) begin
                         write_ptr <= 2;
                         crc_state <= crc_next;
+                        last_half_reg <= 1'b0;
                         if (tlp_last) begin // First is last
                             read_ptr <= 0;
                             state    <= PRE_WRITE;
@@ -211,6 +226,7 @@ module retry_buffer #(
 
                             // Store LCRC
                             lcrc_reg <= crc_computed;
+                            last_half_reg <= last_half;
                         end
                         crc_state <= crc_next;
                     end
