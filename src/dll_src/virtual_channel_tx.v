@@ -224,7 +224,13 @@ module virtual_channel_tx #
 
     send_DLLP #(
         .DATA_BYTES(DATA_BYTES),
-        .PATTERN_WIDTH(PATTERN_WIDTH)
+        .PATTERN_WIDTH(PATTERN_WIDTH),
+        .INIT_PH(INIT_PH),
+        .INIT_PD(INIT_PD),
+        .INIT_NPH(INIT_NPH),
+        .INIT_NPD(INIT_NPD),
+        .INIT_CPLH(INIT_CPLH),
+        .INIT_CPLD(INIT_CPLD)
     ) send_DLLP_inst (
         .clk(clk),
         .reset(reset),

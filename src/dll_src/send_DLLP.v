@@ -3,7 +3,13 @@ module send_DLLP #
 (
     parameter DATA_BYTES = 8,
     parameter DATA_WIDTH = DATA_BYTES * 8,
-    parameter PATTERN_WIDTH = 64
+    parameter PATTERN_WIDTH = 64,
+    parameter INIT_PH       = 8'd32,
+    parameter INIT_PD       = 12'd1008,
+    parameter INIT_NPH      = 8'd32,
+    parameter INIT_NPD      = 12'd1,
+    parameter INIT_CPLH     = 8'd0,
+    parameter INIT_CPLD     = 12'd0
 )
 (
     input  wire                         clk,
@@ -157,13 +163,37 @@ module send_DLLP #
                                                 : {data3, data2, data1, dllp_type};
     assign DLLP  = {_END, calc_crc, data, SDP};
     assign DLLP_k = {1'b1, 6'b0, 1'b1};
-    assign DLLP_initfc1 = {_END, 8'h92, 8'hd8, 8'h00, 8'h00, 8'h00, 8'h60, SDP,
-                           _END, 8'hf6, 8'hb1, 8'h01, 8'h00, 8'h08, 8'h50, SDP,
-                           _END, 8'hbc, 8'h35, 8'hf0, 8'h03, 8'h08, 8'h40, SDP};
+    // DLLP CRC as crc_gen computes it, for the InitFC DLLPs at elaboration
+    function [15:0] dllp_crc(input [31:0] d);
+        integer i;
+        reg [15:0] c;
+        begin
+            c = 16'hffff;
+            for (i = 0; i < 32; i = i + 1)
+                c = {c[14:0], 1'b0} ^ ((c[15] ^ d[i]) ? 16'h100b : 16'h0000);
+            for (i = 0; i < 8; i = i + 1) begin
+                dllp_crc[i]     = ~c[15 - i];
+                dllp_crc[8 + i] = ~c[7 - i];
+            end
+        end
+    endfunction
+
+    // InitFC DLLP of type t (VC0) with credits h/d
+    function [63:0] initfc(input [7:0] t, input [7:0] h, input [11:0] d);
+        reg [31:0] w;
+        begin
+            w = {d[7:0], h[1:0], 2'b0, d[11:8], 2'b0, h[7:2], t};
+            initfc = {_END, dllp_crc(w), w, SDP};
+        end
+    endfunction
+
+    assign DLLP_initfc1 = {initfc(8'h60, INIT_CPLH, INIT_CPLD),
+                           initfc(8'h50, INIT_NPH,  INIT_NPD),
+                           initfc(8'h40, INIT_PH,   INIT_PD)};
     assign DLLP_initfc1_k = {1'b1, 6'b0, 1'b1, 1'b1, 6'b0, 1'b1, 1'b1, 6'b0, 1'b1};
-    assign DLLP_initfc2 = {_END, 8'hed, 8'ha2, 8'h00, 8'h00, 8'h00, 8'he0, SDP,
-                           _END, 8'h89, 8'hcb, 8'h01, 8'h00, 8'h08, 8'hd0, SDP,
-                           _END, 8'hc3, 8'h4f, 8'hf0, 8'h03, 8'h08, 8'hc0, SDP};
+    assign DLLP_initfc2 = {initfc(8'he0, INIT_CPLH, INIT_CPLD),
+                           initfc(8'hd0, INIT_NPH,  INIT_NPD),
+                           initfc(8'hc0, INIT_PH,   INIT_PD)};
     assign DLLP_initfc2_k = {1'b1, 6'b0, 1'b1, 1'b1, 6'b0, 1'b1, 1'b1, 6'b0, 1'b1};
 
 endmodule
