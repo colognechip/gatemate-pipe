@@ -335,14 +335,21 @@ module ccfpga_pipe_logic #(
       .o_flag  ( s_count_flag        )
       );
 
-   // Tx clock generator (Clock Divider)
-   ccfpga_pipe_clk_divider #(
-      .DIVIDER ( DIVIDER )
-   ) clk_div_inst (
-      .clk_in  ( i_clk_core_pll ),
-      .s_reset ( s_reset        ),
-      .clk_out ( s_tx_clk       )
-   );
+   // Tx clock: the SerDes word clock (64 bits, 80 on the line)
+   generate
+      if (DATA_BYTES == 8) begin // 64-Bit PIPE: PLL_CLK_O is the word clock (PLL_FCNTRL = 6'h3A)
+         assign s_tx_clk = i_clk_core_pll;
+      end
+      else begin // narrower PIPE: PLL_CLK_O is twice the word clock (PLL_FCNTRL = 6'h1A)
+         ccfpga_pipe_clk_divider #(
+            .DIVIDER ( DIVIDER )
+         ) clk_div_inst (
+            .clk_in  ( i_clk_core_pll ),
+            .s_reset ( s_reset        ),
+            .clk_out ( s_tx_clk       )
+         );
+      end
+   endgenerate
 
    generate
       if (DATA_BYTES == 8) begin // 64-Bit PIPE
