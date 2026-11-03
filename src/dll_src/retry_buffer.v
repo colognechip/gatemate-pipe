@@ -33,7 +33,7 @@ module retry_buffer #(
     localparam  STP = 8'hFB;
     localparam _END = 8'hFD;
 
-    reg [DATA_WIDTH-1:0] retry_buffer [DEPTH-1:0];
+    reg [DATA_WIDTH-1:0] buffer [DEPTH-1:0];
 
     reg [BRAM_ADDR_WIDTH-1:0] write_ptr;
     reg [BRAM_ADDR_WIDTH-1:0] read_ptr;
@@ -56,8 +56,35 @@ module retry_buffer #(
     assign empty = (state == IDLE);
     assign full  = (state != IDLE);
 
+    // Block RAM: one write port, one registered read port. The read address
+    // is read_ptr's next value, so mem_rdata is buffer[read_ptr], as
+    // the combinational read had it
+    reg                       mem_we;
+    reg [BRAM_ADDR_WIDTH-1:0] mem_waddr;
+    reg      [DATA_WIDTH-1:0] mem_wdata;
+    reg [BRAM_ADDR_WIDTH-1:0] mem_raddr;
+    reg      [DATA_WIDTH-1:0] mem_rdata;
+
+    always @(posedge clk) begin
+        if (mem_we)
+            buffer[mem_waddr] <= mem_wdata;
+        mem_rdata <= buffer[mem_raddr];
+    end
+
+    always @(*) begin
+        mem_raddr = read_ptr;
+        case (state)
+            IDLE:        if (tlp_valid && tlp_first && tlp_last) mem_raddr = 0;
+            STORE_TLP:   if (tlp_valid && tlp_last)              mem_raddr = 0;
+            WRITE_START: if (!release_flag && tlp_sending)       mem_raddr = 1;
+            SEND_TLP:    if (read_cnt != word_cnt - 1)           mem_raddr = read_ptr + 1'b1;
+            TLP_SENT:    if (!release_flag && retransmit_flag)   mem_raddr = 0;
+            default:     ;
+        endcase
+    end
+
     assign tlp_out_data = ((state == WRITE_START) || (state == SEND_TLP))
-                          ? retry_buffer[read_ptr] : {DATA_WIDTH{1'b0}};
+                          ? mem_rdata : {DATA_WIDTH{1'b0}};
 
     assign tlp_out_data_k = (state == WRITE_START)
                             ? {{(DATA_BYTES-1){1'b0}}, 1'b1} : (state == SEND_TLP && read_cnt == word_cnt - 1)
@@ -132,52 +159,84 @@ module retry_buffer #(
         end
     endgenerate
 
-    // Write port
+    // Write port: one whole word a clock. A TLP word straddles two buffer
+    // words (STP and the sequence number come first), so the part that starts
+    // the next word waits in carry until the next TLP word completes it. The
+    // last words (the rest of the TLP, the LCRC, END) go in after the last TLP
+    // word: tail_word0 in PRE_WRITE at write_ptr - 1, tail_word1 (32-bit only)
+    // one clock later at write_ptr. Nothing reads them before.
+    wire                tlp_beat = tlp_valid && ((state == IDLE && tlp_first) || state == STORE_TLP);
+    reg          [23:0] carry;
+    reg [DATA_WIDTH-1:0] tail_word0;
+    reg [DATA_WIDTH-1:0] tail_word1;
+    reg                 tail_we0;
+    reg                 tail_we1;
+
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            tail_we0 <= 1'b0;
+            tail_we1 <= 1'b0;
+        end else begin
+            tail_we0 <= tlp_beat && tlp_last;
+            tail_we1 <= tail_we0 && (DATA_WIDTH == 32);
+        end
+    end
+
     generate
         if ( DATA_WIDTH == 64 ) begin : retry_buffer_64
             always @(posedge clk) begin
+                if (tlp_beat) begin
+                    carry <= tlp_in_data[63:40];
+                    if (state == STORE_TLP && last_half)
+                        tail_word0 <= {32'b0, _END, crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16]};
+                    else
+                        tail_word0 <= {_END, crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16], crc_computed_next[31:24], tlp_in_data[63:40]};
+                end
+            end
+
+            always @(*) begin
+                mem_we    = 1'b0;
+                mem_waddr = write_ptr - 1'b1;
+                mem_wdata = {tlp_in_data[39:0], carry};
                 if ((state == IDLE && tlp_first) && tlp_valid) begin
-                    retry_buffer[0]                  <= {tlp_in_data[39:0], current_seq_num[7:0], {4'b0, current_seq_num[11:8]}, STP};
-                    retry_buffer[1][23:0]            <= tlp_in_data[63:40];
-                    if (tlp_last) begin
-                        retry_buffer[1][55:24]       <= {crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16], crc_computed_next[31:24]};
-                        retry_buffer[1][63:56]       <= _END;
-                    end
-                end else if ((state == STORE_TLP && tlp_last) && tlp_valid) begin
-                    if (last_half) begin
-                        retry_buffer[write_ptr-1][55:24] <= tlp_in_data[31:0];
-                        retry_buffer[write_ptr-1][63:56] <= crc_computed_next[31:24];
-                        retry_buffer[write_ptr][23:0]    <= {crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16]};
-                        retry_buffer[write_ptr][31:24]   <= _END;
-                        retry_buffer[write_ptr][63:32]   <= 32'b0; // clear the rest of the word
-                    end else begin
-                        retry_buffer[write_ptr-1][63:24] <= tlp_in_data[39:0];
-                        retry_buffer[write_ptr][23:0]    <= tlp_in_data[63:40];
-                        retry_buffer[write_ptr][55:24]   <= {crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16], crc_computed_next[31:24]};
-                        retry_buffer[write_ptr][63:56]   <= _END;
-                    end
+                    mem_we    = 1'b1;
+                    mem_waddr = 0;
+                    mem_wdata = {tlp_in_data[39:0], current_seq_num[7:0], {4'b0, current_seq_num[11:8]}, STP};
                 end else if (state == STORE_TLP && tlp_valid) begin
-                    retry_buffer[write_ptr-1][63:24] <= tlp_in_data[39:0];
-                    retry_buffer[write_ptr][23:0]    <= tlp_in_data[63:40];
+                    mem_we    = 1'b1;
+                    if (last_half)
+                        mem_wdata = {crc_computed_next[31:24], tlp_in_data[31:0], carry};
+                end else if (tail_we0) begin
+                    mem_we    = 1'b1;
+                    mem_wdata = tail_word0;
                 end
             end
         end else if (DATA_WIDTH == 32) begin : retry_buffer_32
             always @(posedge clk) begin
+                if (tlp_beat) begin
+                    carry      <= tlp_in_data[31:8];
+                    tail_word0 <= {crc_computed_next[31:24], tlp_in_data[31:8]};
+                    tail_word1 <= {_END, crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16]};
+                end
+            end
+
+            always @(*) begin
+                mem_we    = 1'b0;
+                mem_waddr = write_ptr - 1'b1;
+                mem_wdata = {tlp_in_data[7:0], carry};
                 if ((state == IDLE && tlp_first) && tlp_valid) begin
-                    retry_buffer[0]                  <= {tlp_in_data[7:0], current_seq_num[7:0], {4'b0, current_seq_num[11:8]}, STP};
-                    retry_buffer[1][23:0]            <= tlp_in_data[31:8];
-                    if (tlp_last) begin
-                        retry_buffer[1][31:24]       <= crc_computed_next[31:24];
-                        retry_buffer[2][31:0]        <= {_END, crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16]};
-                    end
-                end else if ((state == STORE_TLP && tlp_last) && tlp_valid) begin
-                    retry_buffer[write_ptr-1][31:24] <= tlp_in_data[7:0];
-                    retry_buffer[write_ptr][23:0]    <= tlp_in_data[31:8];
-                    retry_buffer[write_ptr][31:24]   <= crc_computed_next[31:24];
-                    retry_buffer[write_ptr+1][31:0]  <= {_END, crc_computed_next[7:0], crc_computed_next[15:8], crc_computed_next[23:16]};
+                    mem_we    = 1'b1;
+                    mem_waddr = 0;
+                    mem_wdata = {tlp_in_data[7:0], current_seq_num[7:0], {4'b0, current_seq_num[11:8]}, STP};
                 end else if (state == STORE_TLP && tlp_valid) begin
-                    retry_buffer[write_ptr-1][31:24] <= tlp_in_data[7:0];
-                    retry_buffer[write_ptr][23:0]    <= tlp_in_data[31:8];
+                    mem_we    = 1'b1;
+                end else if (tail_we0) begin
+                    mem_we    = 1'b1;
+                    mem_wdata = tail_word0;
+                end else if (tail_we1) begin
+                    mem_we    = 1'b1;
+                    mem_waddr = write_ptr;
+                    mem_wdata = tail_word1;
                 end
             end
         end
