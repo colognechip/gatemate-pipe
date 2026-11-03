@@ -125,7 +125,7 @@ module virtual_channel #
     reg  [2:0] fsm_state_d;
     wire       fsm_state_changed = (fsm_state != fsm_state_d);
 
-    wire END_lost;
+    wire END_lost = 1'b0; // no source yet; packet_handler also ends a TLP at MAX_TLP_WORDS
 
     packet_handler #(
         .DATA_BYTES(DATA_BYTES),
