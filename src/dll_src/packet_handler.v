@@ -48,10 +48,11 @@ module packet_handler #(
     end
 
     reg [DATA_BYTES - 1 : 0] rx_data_k_shift [WIN_WORDS - 1 : 0];
+    integer j; // a loop variable of its own: one shared by two always blocks has two drivers
     always @ (posedge clk) begin
         rx_data_k_shift[0] <= rx_data_k;
-        for ( i = 1; i < WIN_WORDS; i = i + 1 ) begin
-            rx_data_k_shift[i] <= rx_data_k_shift[i - 1];
+        for ( j = 1; j < WIN_WORDS; j = j + 1 ) begin
+            rx_data_k_shift[j] <= rx_data_k_shift[j - 1];
         end
     end
 

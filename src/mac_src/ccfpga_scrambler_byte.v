@@ -17,6 +17,7 @@ module ccfpga_scrambler_byte(
     localparam SKP = 8'h1C;
 
     always @(*) begin
+        data_c = 8'h00; // used only where the LFSR advances: no latch
         if (data_in == COM && data_in_k) begin // Initialize LFSR on COM
             lfsr_out = 16'hFFFF;
         end else if ((data_in == SKP && data_in_k) || !scrambler_en) begin // no advancement of LFSR for SKP
